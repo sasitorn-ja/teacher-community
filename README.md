@@ -14,8 +14,9 @@ npm run dev
 1. สร้างโปรเจกต์ Supabase ชื่อ `teacher-community`
 2. รัน `supabase/schema.sql` ใน SQL Editor
 3. คัดลอก Project URL และ anon key ลงใน `.env.local`
-4. เพิ่ม URL ของ Vercel ใน Authentication > URL Configuration > Redirect URL
-5. เปิด Email provider เพื่อใช้ Magic Link สำหรับครูในรุ่นแรก
+4. กำหนด `VITE_ADMIN_EMAIL` เป็นอีเมลของผู้ดูแลระบบ
+5. เพิ่ม URL ของ Vercel ใน Authentication > URL Configuration > Redirect URL
+6. เปิด Email provider เพื่อใช้ Magic Link สำหรับครูในรุ่นแรก
 
 รหัสชุมชนสร้างที่ฐานข้อมูลแบบ atomic เริ่มจาก `กก026` จึงไม่ซ้ำแม้มีการลงทะเบียนพร้อมกันจำนวนมาก
 
