@@ -403,3 +403,24 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
   .safety-hero .form-footer{padding:16px 18px}
   .storage-overview{width:calc(100% - 28px);border-radius:16px}
 }
+
+/* Short desktop viewports should show the teacher form and credit footer in
+   one frame. Admin remains a normal scrolling workspace. */
+@media(min-width:821px) and (max-height:760px){
+  body:has(.teacher-page){overflow:hidden}
+  body:has(.teacher-page) .app-shell{height:100svh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  body:has(.teacher-page) .safety-topbar{height:64px;flex:0 0 64px}
+  body:has(.teacher-page) .safety-topbar .brand-mark{width:46px;height:46px}
+  body:has(.teacher-page) .teacher-page{flex:1;min-height:0;height:auto;padding:16px 30px 10px;gap:28px;align-items:center}
+  body:has(.teacher-page) .teacher-intro{padding-top:0}
+  body:has(.teacher-page) .safety-hero .teacher-intro h1{font-size:clamp(34px,4.1vw,45px);line-height:1.08;margin:12px 0 9px}
+  body:has(.teacher-page) .safety-hero .teacher-intro p{font-size:14px;line-height:1.55;margin:0}
+  body:has(.teacher-page) .intro-stats{margin-top:16px}
+  body:has(.teacher-page) .community-form{max-height:100%;overflow:hidden}
+  body:has(.teacher-page) .form-heading{padding:18px 28px}
+  body:has(.teacher-page) .form-grid{gap:11px 16px;padding:17px 28px 18px}
+  body:has(.teacher-page) .field input{height:42px}
+  body:has(.teacher-page) .field textarea{height:74px;min-height:74px;resize:none}
+  body:has(.teacher-page) .form-footer{padding:12px 28px}
+  body:has(.teacher-page) .credit-footer{flex:0 0 auto;padding:8px 16px 11px}
+}
