@@ -86,7 +86,7 @@ alter table public.teacher_profiles enable row level security;
 create policy "public community cards" on public.communities for select using (true);
 create policy "teacher reads profile" on public.teacher_profiles for select using (id = auth.uid() or public.is_admin());
 create policy "admin updates own profile" on public.teacher_profiles for update to authenticated using (id = auth.uid() and role = 'admin') with check (id = auth.uid() and role = 'admin');
-create policy "teacher creates community" on public.communities for insert to authenticated with check (owner_id = auth.uid());
+create policy "teacher creates community" on public.communities for insert to authenticated with check (owner_id = auth.uid() or public.is_admin());
 create policy "teacher edits community" on public.communities for update to authenticated using (owner_id = auth.uid() or public.is_admin()) with check (owner_id = auth.uid() or public.is_admin());
 create policy "admin deletes communities" on public.communities for delete to authenticated using (public.is_admin());
 -- Bootstrap first admin after creating that person in Authentication > Users:
