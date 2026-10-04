@@ -658,6 +658,15 @@ function ImageLightbox({src,onClose}:{src:string;onClose:()=>void}) {
   return <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูปภาพขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูปภาพ"><X size={20}/></button><img src={src} alt="รูปภาพขนาดเต็ม"/></div>
 }
 
+function TemplateLightbox({community,teacher,settings,onClose}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;onClose:()=>void}) {
+  useEffect(()=>{
+    function close(event:KeyboardEvent) { if (event.key === 'Escape') onClose() }
+    document.addEventListener('keydown',close)
+    return ()=>document.removeEventListener('keydown',close)
+  },[onClose])
+  return <div className="image-lightbox template-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูป Template ขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูป Template"><X size={20}/></button><div className="template-lightbox-card"><TeacherTemplateCard community={community} teacher={teacher} settings={settings}/></div></div>
+}
+
 type AdminProps={accounts:TeacherAccount[];communities:Community[];filtered:Community[];selected?:Community;search:string;setSearch:(x:string)=>void;loading:boolean;accountForm:typeof emptyAccount;setAccountForm:(x:typeof emptyAccount)=>void;editingAccount:string|null;onSaveAccount:(e:React.FormEvent)=>void;onEditAccount:(x:TeacherAccount)=>void;onDeleteAccount:(x:TeacherAccount)=>void;onCancelAccount:()=>void;onImportAccounts:(file:File|null)=>Promise<void>;importingAccounts:boolean;onExportExcel:()=>void;onExportCard:()=>void;onSelected:(x:string)=>void;cardRef:React.Ref<HTMLDivElement>;settings:SystemSettings;onSaveSettings:(x:SystemSettings)=>void;onSaveAdminAuth:(x:SystemSettings)=>Promise<void>;storageItems:StorageItem[];storageStats:StorageStats;onDeleteImage:(x:Community)=>void;onAdminSaveCommunity:AdminCommunitySave;onDeleteDate:(date:string)=>Promise<void>;onDeleteBeforeDate:(date:string)=>Promise<void>;onLoadDatabaseUsage:()=>Promise<DatabaseUsageRow[]>;onRunApiAudit:()=>Promise<ApiAuditItem[]>;adminTab:AdminTab}
 
 function StorageManager(p:{items:StorageItem[];stats:StorageStats;communities:Community[];onDeleteImage:(x:Community)=>void;onDeleteBeforeDate:(date:string)=>Promise<void>;onLoadDatabaseUsage:()=>Promise<DatabaseUsageRow[]>;onRunApiAudit:()=>Promise<ApiAuditItem[]>}) {
@@ -857,7 +866,7 @@ function TemplatePanel({communities,accounts,settings,onDeleteDate}:{communities
   const pageCount = Math.max(1,Math.ceil(visibleDaily.length/pageSize))
   const currentPage = Math.min(page,pageCount)
   const pagedDaily = visibleDaily.slice((currentPage-1)*pageSize,currentPage*pageSize)
-  const [previewImage,setPreviewImage] = useState('')
+  const [previewCommunity,setPreviewCommunity] = useState<Community|null>(null)
   useEffect(()=>{
     if (selectedTeacherId !== 'all' && selectedTeacherId && !selectedTeacher) setSelectedTeacherId('all')
   },[selectedTeacherId,selectedTeacher,teachers])
@@ -883,10 +892,10 @@ function TemplatePanel({communities,accounts,settings,onDeleteDate}:{communities
     {selectedCommunity && selectedTeacher ? <div className="template-preview-wrap"><TeacherTemplateCard community={selectedCommunity} teacher={selectedTeacher} settings={settings} ref={previewRef}/></div> : <div className="template-empty template-empty-preview"><FileSpreadsheet size={22}/><b>{selectedTeacherId==='all'&&visibleDaily.length?'เลือกชื่อคุณครูเพื่อสร้าง Template PNG':'ยังไม่มีข้อมูลสำหรับสร้าง Template'}</b><span>{selectedTeacherId==='all'&&visibleDaily.length?'ขณะนี้กำลังแสดงข้อมูลคุณครูทั้งหมดด้านล่าง':'เลือกวันที่และคุณครูที่มีการบันทึกข้อมูลแล้ว'}</span></div>}
     {visibleDaily.length ? <>
       <div className="template-day-summary"><b>รูป Template ของวันที่เลือก</b><span>{number(visibleDaily.length)} รายการ · {selectedTeacherId==='all'?'แสดงข้อมูลคุณครูทั้งหมด':'แสดงข้อมูลของคุณครูที่เลือก'}</span></div>
-      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>item.image_url&&setPreviewImage(item.image_url)} disabled={!item.image_url} title={item.image_url?'กดเพื่อดูรูปคุณครูขนาดเต็ม':'ยังไม่มีรูปคุณครู'}><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} settings={settings} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td></tr>)}</tbody></table></div>
+      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} settings={settings} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td></tr>)}</tbody></table></div>
       {pageCount>1&&<TemplatePagination page={currentPage} pageCount={pageCount} onPageChange={setPage}/>} 
     </> : <div className="template-empty"><FileSpreadsheet size={22}/><b>ยังไม่มีข้อมูลในวันที่เลือก</b><span>ลองเลือกวันอื่น หรือรอคุณครูบันทึกข้อมูลชุมชน</span></div>}
-    {previewImage&&<ImageLightbox src={previewImage} onClose={()=>setPreviewImage('')}/>} 
+    {previewCommunity&&<TemplateLightbox community={previewCommunity} teacher={templateTeacher(previewCommunity)} settings={settings} onClose={()=>setPreviewCommunity(null)}/>}
   </section>
 }
 
