@@ -406,6 +406,12 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
 .storage-stat svg{color:#3b7652}
 .storage-capacity{background:#edf4e1;border-color:#d6e5c8;color:#3b7652}
 .storage-note{color:#78827b}
+.storage-error{border:1px solid #edc8bd;border-radius:12px;background:#fff7f3;color:#9a4c43;padding:12px 14px;margin-top:14px}
+.storage-refresh-button{display:inline-flex;align-items:center;gap:6px;border:1px solid #b8ceb0;border-radius:9px;background:#f7faef;color:#2d7253;padding:8px 11px;font:700 12px Sarabun,sans-serif;cursor:pointer}
+.storage-refresh-button:disabled{opacity:.55;cursor:wait}
+.storage-usage-panel,.api-audit-panel{margin:18px 0;padding:18px;border:1px solid #dfe9d4;border-radius:15px;background:#fbfcf7}
+.storage-usage-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.storage-usage-heading h4{margin:0;color:#285d48;font-size:17px}.storage-usage-heading p{margin:4px 0 0;color:#78827b;font-size:12px}.storage-usage-heading>span{color:#78827b;font-size:12px;white-space:nowrap}
+.storage-usage-table,.api-audit-list{display:grid;gap:7px}.storage-usage-row,.api-audit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #e8eee2;border-radius:10px;background:#fff}.storage-usage-row div,.api-audit-row div{display:grid;gap:2px;min-width:0}.storage-usage-row b,.api-audit-row b{color:#294353;font-size:13px;overflow-wrap:anywhere}.storage-usage-row small,.api-audit-row small{color:#879388;font-size:11px}.storage-usage-row strong,.api-audit-row strong{color:#3b7652;font-size:13px;white-space:nowrap}.api-audit-panel{border-color:#e6ddcc;background:#fffdf9}.api-audit-row.ok{border-color:#dfe9d4}.api-audit-row.ok strong{color:#3b7652}.api-audit-row.slow{border-color:#ecd9a6;background:#fffaf0}.api-audit-row.slow strong{color:#a26a24}.api-audit-row.error{border-color:#edc8bd;background:#fff7f3}.api-audit-row.error strong{color:#b14c43}.api-audit-row.not-connected{border-color:#ddd8d0;background:#f7f5f1}.api-audit-row.not-connected strong{color:#8a8178}
 .storage-cleanup{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,1.2fr);gap:20px;align-items:end;margin:20px 0;padding:18px;border:1px solid #edc8bd;border-radius:15px;background:#fff7f3}
 .storage-cleanup h4{margin:0;color:#8f403a;font-size:17px}.storage-cleanup p{margin:5px 0 0;color:#766e68;font-size:12px;line-height:1.55}.storage-cleanup-controls{display:flex;align-items:end;gap:9px;flex-wrap:wrap}.storage-cleanup-controls label{display:grid;gap:6px;color:#6e514b;font-size:12px;font-weight:700}.storage-cleanup-controls input{height:40px;border:1px solid #e3b9af;border-radius:9px;padding:0 10px;background:#fff;color:#4b403c;font:inherit}.storage-cleanup-count{padding:10px 11px;border-radius:9px;background:#f6ece8;color:#9a8179;font-size:11px;white-space:nowrap}.storage-cleanup-count.has-records{background:#ffe2dc;color:#a7463d;font-weight:700}
 .storage-media-row{border-color:#eee6da}
@@ -457,7 +463,7 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
   .safety-hero .field>span{font-size:13px}
   .safety-hero .form-footer{padding:16px 18px}
   .storage-overview{width:calc(100% - 28px);border-radius:16px}
-  .storage-cleanup{grid-template-columns:1fr;gap:13px;padding:14px}.storage-cleanup-controls{align-items:stretch;flex-direction:column}.storage-cleanup-controls label,.storage-cleanup-controls input,.storage-cleanup-controls .danger-button{width:100%;box-sizing:border-box}.storage-cleanup-count{text-align:center}
+  .storage-cleanup{grid-template-columns:1fr;gap:13px;padding:14px}.storage-cleanup-controls{align-items:stretch;flex-direction:column}.storage-cleanup-controls label,.storage-cleanup-controls input,.storage-cleanup-controls .danger-button{width:100%;box-sizing:border-box}.storage-cleanup-count{text-align:center}.storage-usage-heading{align-items:flex-start;flex-direction:column}.storage-refresh-button{width:100%;justify-content:center}
 }
 
 /* Short desktop viewports should show the teacher form and credit footer in
