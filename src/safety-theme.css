@@ -262,3 +262,6 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
   .login-support{margin-top:12px;padding-top:10px;font-size:12px}
   .login-footer{display:none}
 }
+
+/* Long teacher-name results must remain independently scrollable. */
+.username-suggestions{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
