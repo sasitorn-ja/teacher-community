@@ -14,14 +14,15 @@ npm run dev
 1. สร้างโปรเจกต์ Supabase ชื่อ `teacher-community`
 2. รัน `supabase/schema.sql` ใน SQL Editor
 3. คัดลอก Project URL และ anon key ลงใน `.env.local`
-4. กำหนด `VITE_ADMIN_EMAIL` เป็นอีเมลของผู้ดูแลระบบ
-5. เพิ่ม URL ของ Vercel ใน Authentication > URL Configuration > Redirect URL
-6. เปิด Email provider เพื่อใช้ Magic Link สำหรับครูในรุ่นแรก
+4. สร้างผู้ใช้แอดมิน 1 คนใน Authentication > Users แล้วรันคำสั่ง bootstrap ที่ท้ายไฟล์ SQL (แทน `AUTH_USER_UUID` ด้วย UUID ของแอดมิน)
+5. Deploy Edge Function `admin-accounts` เพื่อให้แอดมินเพิ่ม แก้ไข หรือลบบัญชีครูผ่านหน้าเว็บ
+
+ครูเข้าสู่ระบบด้วย **ชื่อ-นามสกุลครู** และ **รหัสชุมชน** ที่แอดมินกำหนด ระบบจะส่งรหัสไปตรวจด้วย Supabase Auth โดยตรง ไม่เปรียบเทียบรหัสผ่านในหน้าเว็บ
 
 รหัสชุมชนสร้างที่ฐานข้อมูลแบบ atomic เริ่มจาก `กก026` จึงไม่ซ้ำแม้มีการลงทะเบียนพร้อมกันจำนวนมาก
 
 ## LINE Login
-LINE Login ใช้แทน Magic Link ได้ แต่ Supabase Auth ไม่มี provider LINE สำเร็จรูป. ทางที่ปลอดภัยคือใช้ LINE Login/LIFF ผ่าน Edge Function หรือ backend ของเราเพื่อยืนยัน LINE ID แล้วออก session ของระบบเอง. อย่าเก็บ channel secret, service-role key หรือ Supabase password ใน Vite environment.
+LINE Login ใช้แทนการล็อกอินด้วยรหัสชุมชนได้ในอนาคต แต่เวอร์ชันนี้ใช้รูปแบบบัญชีที่แอดมินจัดการตามโจทย์. อย่าเก็บ channel secret, service-role key หรือ Supabase password ใน Vite environment.
 
 ## Vercel
 เพิ่ม `VITE_SUPABASE_URL` และ `VITE_SUPABASE_ANON_KEY` ใน Environment Variables ของ Vercel แล้ว deploy. ใช้ anon key เท่านั้น ไม่ใช่ service role key หรือ database password.
