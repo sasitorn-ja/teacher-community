@@ -139,6 +139,7 @@ function App() {
   const [imageFile,setImageFile] = useState<File|null>(null)
   const [imagePreview,setImagePreview] = useState('')
   const cardRef = useRef<HTMLDivElement>(null)
+  const clearFormAfterSaveRef = useRef(false)
   const isAdmin = current?.role === 'admin'
   const selected = communities.find((item) => item.id === selectedId) ?? communities[0]
   const filtered = useMemo(() => communities.filter((item) => [item.community_code,item.community_name,item.advisor_name].join(' ').toLowerCase().includes(search.toLowerCase())),[communities,search])
@@ -166,6 +167,10 @@ function App() {
   useEffect(() => { if (current && current.role !== 'admin') void refreshSubmissionCount(current.id,today) }, [current,today])
   useEffect(() => {
     if (!current || current.role === 'admin') return
+    if (clearFormAfterSaveRef.current) {
+      clearFormAfterSaveRef.current = false
+      return
+    }
     const record = communities.find((item) => item.owner_id === current.id && item.activity_date === today)
     if (record) {
       setEditingId(record.id)
@@ -325,6 +330,13 @@ function App() {
     if (community) { setEditingId(community.id); setImageFile(null); setImagePreview(community.image_url ?? ''); setForm({activity_date:community.activity_date,community_code:community.community_code,community_name:community.community_name,advisor_name:community.advisor_name,school_name:community.school_name,location:community.location,member_count:String(community.member_count),description:community.description,image_url:community.image_url ?? ''}) } else { setEditingId(null); setImageFile(null); setImagePreview(''); setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school}) }
     setView('teacher'); window.scrollTo({top:0,behavior:'smooth'})
   }
+  function clearSubmittedCommunityForm() {
+    if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview)
+    setEditingId(null)
+    setImageFile(null)
+    setImagePreview('')
+    setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school})
+  }
   async function saveCommunity(event:React.FormEvent) {
     event.preventDefault()
     if (!current) { setShowLogin(true); flash('กรุณาเข้าสู่ระบบก่อนบันทึก'); return }
@@ -340,9 +352,10 @@ function App() {
         const recordId = editingId ?? existing?.id
         const item:Community = recordId ? {...communities.find((x)=>x.id===recordId)!, ...payload, community_code:code, image_url:payload.image_url ?? undefined} : {...payload,id:crypto.randomUUID(),community_code:code,owner_id:current.id,image_url:payload.image_url ?? undefined}
         const next = recordId ? communities.map((x)=>x.id===item.id?item:x) : [...communities,item]
+        clearFormAfterSaveRef.current = true
         setCommunities(next); localStorage.setItem('teacher-community-demo',JSON.stringify(next));
         if (!recordId) { const nextAccounts=accounts.map((x)=>x.id===current.id?{...x,community_id:item.id}:x); setAccounts(nextAccounts); setCurrent(nextAccounts.find((x)=>x.id===current.id) ?? current); localStorage.setItem('teacher-community-accounts',JSON.stringify(nextAccounts)) }
-        setSelectedId(item.id); setEditingId(item.id); setImageFile(null); setImagePreview(item.image_url ?? ''); setForm({activity_date:item.activity_date,community_code:item.community_code,community_name:item.community_name,advisor_name:item.advisor_name,school_name:item.school_name,location:item.location,member_count:String(item.member_count),description:item.description,image_url:item.image_url ?? ''})
+        setSelectedId(item.id); clearSubmittedCommunityForm()
         const count = await recordSubmission(current.id,item.id,today)
         flash(`บันทึกสำเร็จแล้ว · วันนี้ส่งข้อมูลแล้ว ${number(count)} ครั้ง`)
         return
@@ -354,7 +367,8 @@ function App() {
       catch (error) { flash(`บันทึกไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
       if (answer.error) { flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
       const count = await recordSubmission(current.id,answer.data.id,today)
-      await load(false); setSelectedId(answer.data.id); setEditingId(answer.data.id); flash(`บันทึกสำเร็จแล้ว · วันนี้ส่งข้อมูลแล้ว ${number(count)} ครั้ง`)
+      clearFormAfterSaveRef.current = true
+      await load(false); setSelectedId(answer.data.id); clearSubmittedCommunityForm(); flash(`บันทึกสำเร็จแล้ว · วันนี้ส่งข้อมูลแล้ว ${number(count)} ครั้ง`)
     } finally {
       setSaving(false)
     }
