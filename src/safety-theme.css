@@ -156,7 +156,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 /* Final viewport pass: keep the login composition compact and within the first screen. */
 @media(min-width:821px){
   .login-screen{height:100svh;overflow:hidden}
-  .login-layout{height:calc(100svh - 126px);min-height:0;padding-top:24px;padding-bottom:12px}
+  .login-layout{height:calc(100svh - 180px);min-height:0;padding-top:24px;padding-bottom:12px}
   .login-visual{min-height:0;height:100%;max-height:560px}
   .login-visual-copy{top:18px}
   .login-visual-copy h1{font-size:clamp(42px,4.5vw,62px)}
@@ -272,11 +272,11 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 @media(min-width:821px){.login-card-sprout{width:54px;height:54px;margin-bottom:8px}}
 @media(min-width:821px){.login-visual-copy h1{font-size:clamp(40px,3.8vw,52px);line-height:1.18;margin:10px 0 15px}.login-visual-copy p{line-height:1.5}}
 .login-screen.initial-login-backdrop{position:relative;isolation:isolate;min-height:100svh;background:radial-gradient(circle at 12% 30%,#f0f3dc 0 14%,transparent 35%),radial-gradient(circle at 88% 78%,#e4eccf 0 10%,transparent 28%),#fbfaf1}
-.login-screen.initial-login-backdrop::before{display:block;content:'';position:absolute;z-index:0;inset:auto 0 0;width:100%;max-width:none;height:min(32vh,360px);background:url('/login-background.png') bottom center/cover no-repeat;opacity:.62;mix-blend-mode:multiply;pointer-events:none}
+.login-screen.initial-login-backdrop::before{display:block;content:'';position:absolute;z-index:0;inset:auto 0 0;width:100%;max-width:none;height:calc(min(32vh,360px) + 180px);background:url('/login-background.png') bottom center/cover no-repeat;opacity:.62;mix-blend-mode:multiply;pointer-events:none}
 .login-screen .login-layout,.login-screen .login-footer{position:relative;z-index:1}
-@media(max-width:820px){.login-screen.initial-login-backdrop::before{height:240px;opacity:.48}}
-@media(max-width:600px){.login-screen.initial-login-backdrop::before{height:190px;opacity:.36}}
-.credit-footer{width:min(100% - 32px,1130px);margin:0 auto;padding:16px 16px 22px;text-align:center;color:#918b82;font-family:Sarabun,sans-serif;font-size:10px;line-height:1.55;letter-spacing:.05px}.credit-footer-line{height:1px;background:#e8e1d7;margin-bottom:10px}.credit-footer strong{color:#657d58;font-weight:700}.credit-footer a{color:#71866a;text-decoration:none}.credit-footer a:hover{text-decoration:underline}@media(max-width:600px){.credit-footer{width:min(100% - 24px,1130px);padding:13px 8px 18px;font-size:9px}}
+@media(max-width:820px){.login-screen.initial-login-backdrop::before{height:320px;opacity:.48}}
+@media(max-width:600px){.login-screen.initial-login-backdrop::before{height:260px;opacity:.36}}
+.credit-footer{position:relative;isolation:isolate;overflow:hidden;width:min(100% - 32px,1130px);margin:0 auto;padding:16px 16px 22px;text-align:center;color:#918b82;font-family:Sarabun,sans-serif;font-size:10px;line-height:1.55;letter-spacing:.05px;background:#fbfaf1}.credit-footer::before{content:'';position:absolute;z-index:-1;inset:0;background:url('/login-background.png') bottom center/cover no-repeat;opacity:.28;mix-blend-mode:multiply;pointer-events:none}.credit-footer-line{height:1px;background:#e8e1d7;margin-bottom:10px}.credit-footer strong{color:#657d58;font-weight:700}.credit-footer a{color:#71866a;text-decoration:none}.credit-footer a:hover{text-decoration:underline}@media(max-width:600px){.credit-footer{width:min(100% - 24px,1130px);padding:13px 8px 18px;font-size:9px}}
 .safety-topbar .brand-mark,.login-brand-mark{background-color:transparent!important;background-image:url('/mascot-logo.png')!important;background-position:center!important;background-repeat:no-repeat!important;background-size:contain!important;box-shadow:none!important;border-radius:0!important}
 .login-screen .login-topbar{display:none}
 .login-screen .login-layout{min-height:calc(100svh - 34px);height:calc(100svh - 34px);padding-top:28px}
