@@ -311,6 +311,16 @@ body:has(.login-screen),#root:has(.login-screen){background:#fbfaf1}
   .login-visual img{transform:translateY(5px)}
 }
 
+/* Preserve the supplied background aspect ratio on narrow screens. */
+@media(max-width:820px){
+  .login-screen.initial-login-backdrop{background-size:cover;background-position:center center}
+  .login-visual-copy{display:none}
+}
+
+/* Keep the mascot directly on the supplied scenery without the translucent
+   decorative shape behind it. */
+.login-visual:before{display:none}
+
 /* Authenticated screens use the same warm cream and sage-green language as
    the login screen and supplied design references. */
 body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
@@ -406,6 +416,12 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
 
 /* Short desktop viewports should show the teacher form and credit footer in
    one frame. Admin remains a normal scrolling workspace. */
+@media(min-width:821px){
+  body:has(.teacher-page),body:has(.teacher-page) #root{height:100svh;overflow:hidden}
+  body:has(.teacher-page) .app-shell{height:100svh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  body:has(.teacher-page) .teacher-page{flex:1 1 auto;min-height:0;height:auto}
+  body:has(.teacher-page) .credit-footer{flex:0 0 auto}
+}
 @media(min-width:821px) and (max-height:760px){
   body:has(.teacher-page){overflow:hidden}
   body:has(.teacher-page) .app-shell{height:100svh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
@@ -423,4 +439,76 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
   body:has(.teacher-page) .field textarea{height:74px;min-height:74px;resize:none}
   body:has(.teacher-page) .form-footer{padding:12px 28px}
   body:has(.teacher-page) .credit-footer{flex:0 0 auto;padding:8px 16px 11px}
+}
+
+/* Keep the desktop login card compact when the username suggestions are open. */
+@media(min-width:821px){
+  .login-card.initial-login{padding:24px 36px 18px}
+  .login-card-sprout{width:50px;height:50px;margin-bottom:6px}
+  .login-card h2{font-size:29px}
+  .login-card>p{font-size:14px;margin-bottom:9px}
+  .login-term{padding:6px 12px;margin-bottom:14px}
+  .login-form{gap:10px}
+  .login-input-wrap{height:50px}
+  .login-options{margin-top:-1px}
+  .remember-option{font-size:14px!important;gap:8px}
+  .remember-option input{width:18px;height:18px}
+  .forgot-link{font-size:14px}
+  .login-submit{height:50px;font-size:18px}
+}
+
+/* Admin tools are separated so teachers never need to navigate through them. */
+.admin-menu-page{width:min(1280px,calc(100% - 56px));margin:32px auto 0}
+.admin-tabs{display:flex;flex-wrap:wrap;gap:9px;margin:20px 0}
+.admin-tab{display:inline-flex;align-items:center;gap:8px;border:1px solid #dce8ce;background:#fffdf9;color:#396c50;border-radius:11px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}
+.admin-tab:hover,.admin-tab.active{background:#e6f0d8;border-color:#c8dfb6;color:#164d3c}
+.admin-panel{background:#fffdf9f2;border:1px solid #eee3d5;border-radius:20px;box-shadow:0 16px 36px #876f3b1c;padding:24px}
+.admin-menu-page .storage-overview{width:100%;margin:0}
+.template-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:22px 0 18px}
+.template-toolbar label{display:grid;gap:7px;color:#164d3c;font-weight:700}
+.template-toolbar input{height:42px;border:1px solid #ddd2c2;border-radius:10px;padding:0 12px;background:#fff;color:#294338;font:inherit}
+.template-table-wrap{overflow:auto;border:1px solid #eee3d5;border-radius:13px}
+.template-table{border-collapse:collapse;width:100%;min-width:780px;background:#fff}
+.template-table th,.template-table td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee9df}
+.template-table th{background:#edf4e1;color:#1e5f43;font-weight:700}
+.template-table td{color:#46564b}
+.template-table tr:last-child td{border-bottom:0}
+.template-empty{min-height:190px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:1px dashed #d8e3cb;border-radius:13px;color:#6b7d70;background:#f8faef}
+.template-empty svg{color:#4b865f}
+.template-empty span{font-size:14px}
+
+@media(max-width:850px){
+  .admin-menu-page{width:calc(100% - 36px);margin-top:20px}
+}
+@media(max-width:600px){
+  .admin-menu-page{width:calc(100% - 28px)}
+  .admin-tabs{gap:7px}
+  .admin-tab{flex:1 1 calc(50% - 7px);justify-content:center;padding:10px 8px;font-size:13px}
+  .admin-panel{padding:18px 15px;border-radius:16px}
+  .template-toolbar{align-items:stretch;flex-direction:column}
+  .template-toolbar .primary-button{justify-content:center}
+}
+
+/* Desktop composition follows the supplied mockup: larger left visual and a
+   spacious login card aligned on the right. */
+@media(min-width:1400px){
+  .login-layout{width:min(1450px,100%);grid-template-columns:minmax(0,1fr) 520px;gap:90px;padding:28px 55px 12px}
+  .login-visual{height:580px;max-height:none}
+  .login-visual-copy{top:0;left:8%;max-width:600px}
+  .login-visual-copy h1{font-size:clamp(48px,3.5vw,60px);line-height:1.22;letter-spacing:-1.5px;margin:12px 0 15px}
+  .login-visual-copy p{font-size:18px}
+  .login-visual img{width:min(100%,540px);height:380px;margin-top:120px;transform:translateY(45px)}
+  .login-card.initial-login{max-width:520px;padding:24px 38px 42px;transform:translateY(8px)}
+  .login-card-sprout{width:50px;height:50px;margin-bottom:8px}
+  .login-card h2{font-size:31px;margin-bottom:5px}
+  .login-card>p{font-size:16px;margin-bottom:16px}
+  .login-term{font-size:15px;padding:8px 12px;margin-bottom:22px}
+  .login-form{gap:13px}
+  .login-form>label{font-size:15px}
+  .login-input-wrap{height:56px;margin-top:7px}
+  .login-input-wrap input{font-size:17px}
+  .login-options{margin-top:-1px}
+  .remember-option{font-size:14px!important}
+  .forgot-link{font-size:14px}
+  .login-submit{height:56px;font-size:18px}
 }
