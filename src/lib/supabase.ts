@@ -32,5 +32,12 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 export const supabase = hasSupabaseConfig
-  ? createClient(url, anonKey, { global: { fetch: fetchWithTimeout } })
+  ? createClient(url, anonKey, {
+      global: { fetch: fetchWithTimeout },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null
