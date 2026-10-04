@@ -237,3 +237,28 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 @media(max-width:820px) and (min-width:701px){.login-visual{height:270px;min-height:270px}.login-visual img{height:140px;width:220px;transform:translateY(16px)}}
 @media(max-width:700px){.login-visual{height:190px;min-height:190px}.login-visual img{height:125px;width:175px;transform:translateY(18px)}}
 @media(max-width:700px) and (max-height:740px){.login-visual{height:112px;min-height:112px}.login-visual img{width:100px;height:76px;transform:translateY(5px)}}
+
+@media(max-width:820px) and (min-width:701px) and (max-height:900px){
+  .login-topbar{height:64px;padding:0 24px}
+  .login-brand-mark{width:39px;height:39px}
+  .login-brand b{font-size:17px}
+  .login-brand small{font-size:11px;margin-top:1px}
+  .login-layout{padding:8px 22px 8px}
+  .login-visual{height:160px;min-height:160px}
+  .login-visual-copy{top:0}
+  .login-visual-kicker{font-size:12px}
+  .login-visual-copy h1{font-size:32px;line-height:1.05;margin:4px 0}
+  .login-visual-copy p{font-size:13px}
+  .login-visual img{width:130px;height:84px;transform:translateY(16px)}
+  .login-card.initial-login{padding:18px 28px 14px}
+  .login-card-sprout{width:35px;height:35px;font-size:21px;margin-bottom:5px}
+  .login-card h2{font-size:27px}
+  .login-card>p{font-size:13px;margin-bottom:9px}
+  .login-term{font-size:13px;padding:6px;margin-bottom:13px}
+  .login-form{gap:9px}
+  .login-form>label{font-size:14px}
+  .login-input-wrap{height:46px}
+  .login-submit{height:47px;font-size:17px}
+  .login-support{margin-top:12px;padding-top:10px;font-size:12px}
+  .login-footer{display:none}
+}
