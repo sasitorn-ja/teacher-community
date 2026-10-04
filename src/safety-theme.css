@@ -288,3 +288,4 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 .login-screen.initial-login-backdrop::before{display:none}
 .credit-footer{background:transparent}
 .credit-footer::before{display:none}
+@media(min-width:821px){.login-layout{align-items:start;padding-top:clamp(32px,8vh,86px)}.login-visual,.login-card.initial-login{align-self:start}.login-visual-copy{top:0}}
