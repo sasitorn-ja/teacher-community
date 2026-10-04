@@ -130,6 +130,8 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 /* Full username/password login screen. */
 .login-screen.initial-login-backdrop{display:block;padding:0;overflow:auto;background:radial-gradient(circle at 12% 30%,#f0f3dc 0 14%,transparent 35%),radial-gradient(circle at 88% 78%,#e4eccf 0 10%,transparent 28%),#fbfaf1;color:#174c3b}
 .login-screen.initial-login-backdrop::before,.login-screen.initial-login-backdrop::after{display:none}
+.safety-topbar .brand-mark,.login-brand-mark{background-color:transparent;background-image:url('/mascot-logo.png');background-position:center;background-repeat:no-repeat;background-size:contain;box-shadow:none;border-radius:0}
+.safety-topbar .brand-mark svg,.login-brand-mark svg{display:none}
 .login-topbar{height:86px;padding:0 clamp(20px,7vw,96px);border-bottom:1px solid #e2e6d4;background:#fffef9dd;display:flex;align-items:center;justify-content:space-between}
 .login-brand{display:flex;align-items:center;gap:12px;color:#164d3c}
 .login-brand-mark{width:48px;height:48px;border-radius:16px 16px 16px 5px;display:grid;place-items:center;background:linear-gradient(135deg,#6e9f36,#2b674f);color:#fff;box-shadow:0 8px 15px #567c3335}
@@ -265,3 +267,4 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 
 /* Long teacher-name results must remain independently scrollable. */
 .username-suggestions{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
+.safety-topbar .brand-mark,.login-brand-mark{background-color:transparent!important;background-image:url('/mascot-logo.png')!important;background-position:center!important;background-repeat:no-repeat!important;background-size:contain!important;box-shadow:none!important;border-radius:0!important}
