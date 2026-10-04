@@ -208,7 +208,6 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
       </form>
     </section>
   </section>
-  <footer className="login-footer"><span>✦</span> {p.settings.title} · {p.settings.school}</footer>
   <CreditFooter />
 </main>}
 
