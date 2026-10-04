@@ -24,7 +24,7 @@ const demos: Community[] = [
 ]
 const demoAccounts: TeacherAccount[] = [{ id:'admin-1', teacher_name:'ผู้ดูแลระบบ', community_code:'admin2569', role:'admin' }, ...seededTeachers]
 type SystemSettings = { title:string; term:string; year:string; school:string; adminUsername:string; adminPassword:string }
-const defaultSettings:SystemSettings = { title:'ระบบลงทะเบียนชุมนุมคุณครู', term:'ภาคเรียนที่ 2', year:'ปีการศึกษา 2569', school:'โรงเรียนวิเชียรมาตุ', adminUsername:'admin', adminPassword:'admin 1234' }
+const defaultSettings:SystemSettings = { title:'ระบบลงทะเบียนชุมนุมคุณครู', term:'ภาคเรียนที่ 2', year:'ปีการศึกษา 2569', school:'โรงเรียนวิเชียรมาตุ', adminUsername:'admin', adminPassword:'admin1234' }
 const adminEmail = String(import.meta.env.VITE_ADMIN_EMAIL ?? '').trim()
 const number = (n:number) => new Intl.NumberFormat('th-TH').format(n)
 const thaiDate = (value:string) => value ? new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',day:'numeric',month:'long',year:'numeric'}).format(new Date(`${value}T00:00:00+07:00`)) : '-'
@@ -214,7 +214,7 @@ function App() {
       const localAccounts = JSON.parse(localStorage.getItem('teacher-community-accounts') ?? 'null') as TeacherAccount[] | null
       const migratedAccounts = !localAccounts || localAccounts.filter((item)=>item.role==='teacher').length < 100 ? demoAccounts : localAccounts
       const savedSettings = JSON.parse(localStorage.getItem('teacher-community-settings') ?? 'null') as SystemSettings | null
-      const localSettings = savedSettings ? {...defaultSettings,...savedSettings,school:defaultSettings.school,adminUsername:savedSettings.adminUsername || defaultSettings.adminUsername,adminPassword:savedSettings.adminPassword && savedSettings.adminPassword !== 'admin2569' ? savedSettings.adminPassword : defaultSettings.adminPassword} : null
+      const localSettings = savedSettings ? {...defaultSettings,...savedSettings,school:defaultSettings.school,adminUsername:savedSettings.adminUsername || defaultSettings.adminUsername,adminPassword:savedSettings.adminPassword && !['admin2569','admin 1234'].includes(savedSettings.adminPassword) ? savedSettings.adminPassword : defaultSettings.adminPassword} : null
       const restored = migratedAccounts.find((item) => item.id === localStorage.getItem(currentAccountKey)) ?? null
       const localData = localCommunities ?? demos
       setCommunities(localData); setAccounts(migratedAccounts); setSettings(localSettings ?? defaultSettings); setSelectedId(localData[0]?.id ?? null); setCurrent(restored); setView(restored?.role === 'admin' ? 'admin' : 'teacher'); setShowLogin(!restored); if (restored?.role === 'teacher') void refreshSubmissionCount(restored.id,today); setLoading(false); return
@@ -223,11 +223,13 @@ function App() {
       const [{data: dataCommunities,error:communityError},{data:{session},error:sessionError},directoryResult,settingsResult] = await Promise.all([
         withRequestTimeout(supabase!.from('communities').select('*').order('created_at'),'โหลดข้อมูลชุมชน'),
         withRequestTimeout(supabase!.auth.getSession(),'กู้คืนเซสชันการเข้าสู่ระบบ'),
-        withRequestTimeout(supabase!.rpc('list_teacher_directory'),'โหลดรายชื่อครู').catch(()=>({data:null,error:null})),
-        withRequestTimeout(supabase!.from('system_settings').select('id,title,term,year,school').eq('id','main').maybeSingle(),'โหลดค่าระบบ').catch(()=>({data:null,error:null})),
+        withRequestTimeout(supabase!.rpc('list_teacher_directory'),'โหลดรายชื่อครู'),
+        withRequestTimeout(supabase!.from('system_settings').select('id,title,term,year,school').eq('id','main').maybeSingle(),'โหลดค่าระบบ'),
       ])
       if (communityError) throw new Error(`โหลดข้อมูลชุมชนไม่สำเร็จ: ${communityError.message}`)
       if (sessionError) throw sessionError
+      if (directoryResult.error) throw new Error(`โหลดรายชื่อครูไม่สำเร็จ: ${directoryResult.error.message}`)
+      if (settingsResult.error) throw new Error(`โหลดค่าระบบไม่สำเร็จ: ${settingsResult.error.message}`)
       const fixedCommunities = (dataCommunities ?? []) as Community[]
       setCommunities(fixedCommunities); setSelectedId(fixedCommunities[0]?.id ?? null)
       const directoryAccounts = ((directoryResult.data ?? []) as Array<{id:string;teacher_name:string}>).map((item)=>({id:item.id,teacher_name:item.teacher_name,community_code:'',role:'teacher' as const}))
@@ -398,13 +400,13 @@ function App() {
   }
   async function updateSettings(next:SystemSettings) {
     const fixedSettings = {...next,school:next.school.trim() || defaultSettings.school}
-    setSettings(fixedSettings)
-    if (!hasSupabaseConfig) { localStorage.setItem('teacher-community-settings',JSON.stringify(fixedSettings)); flash('บันทึกชื่อระบบแล้ว'); return }
+    if (!hasSupabaseConfig) { setSettings(fixedSettings); localStorage.setItem('teacher-community-settings',JSON.stringify(fixedSettings)); flash('บันทึกชื่อระบบแล้ว'); return }
     let result
     try { result = await withRequestTimeout(supabase!.from('system_settings').upsert({id:'main',title:fixedSettings.title.trim(),term:fixedSettings.term.trim(),year:fixedSettings.year.trim(),school:fixedSettings.school}).select().single(),'บันทึกค่าระบบ') }
     catch (error) { flash(`บันทึกค่าระบบไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
     const {error} = result
     if (error) { flash(`บันทึกค่าระบบไม่สำเร็จ: ${error.message}`); return }
+    setSettings(fixedSettings)
     flash('บันทึกชื่อระบบแล้ว')
   }
   async function updateAdminAuth(next:SystemSettings) {

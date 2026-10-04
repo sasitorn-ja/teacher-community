@@ -87,7 +87,7 @@ create policy "community image uploads"
 on storage.objects for insert to authenticated
 with check (
   bucket_id = 'community-images'
-  and (storage.foldername(name))[1] = auth.uid()::text
+  and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 );
 
 drop policy if exists "community image deletes" on storage.objects;
@@ -95,5 +95,11 @@ create policy "community image deletes"
 on storage.objects for delete to authenticated
 using (
   bucket_id = 'community-images'
-  and (storage.foldername(name))[1] = auth.uid()::text
+  and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 );
+
+drop policy if exists "admin manages community images" on storage.objects;
+create policy "admin manages community images"
+on storage.objects for all to authenticated
+using (bucket_id = 'community-images' and public.is_admin())
+with check (bucket_id = 'community-images' and public.is_admin());
