@@ -388,6 +388,27 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
 .storage-cleanup h4{margin:0;color:#8f403a;font-size:17px}.storage-cleanup p{margin:5px 0 0;color:#766e68;font-size:12px;line-height:1.55}.storage-cleanup-controls{display:flex;align-items:end;gap:9px;flex-wrap:wrap}.storage-cleanup-controls label{display:grid;gap:6px;color:#6e514b;font-size:12px;font-weight:700}.storage-cleanup-controls input{height:40px;border:1px solid #e3b9af;border-radius:9px;padding:0 10px;background:#fff;color:#4b403c;font:inherit}.storage-cleanup-count{padding:10px 11px;border-radius:9px;background:#f6ece8;color:#9a8179;font-size:11px;white-space:nowrap}.storage-cleanup-count.has-records{background:#ffe2dc;color:#a7463d;font-weight:700}
 .storage-media-row{border-color:#eee6da}
 .storage-remove{background:#fff0ec;color:#c65c4d}
+.app-bootstrap{display:grid;place-items:center;min-height:100svh;background:linear-gradient(#fbfaf1e8,#fbfaf1e8),url('/login-background.png') center/cover no-repeat}
+.bootstrap-content{display:flex;align-items:center;gap:11px;padding:17px 23px;border:1px solid #e6ddcc;border-radius:16px;background:#fffdf9e8;box-shadow:0 12px 30px #33472b18;color:#2d7253;font:700 15px Sarabun,sans-serif}
+.bootstrap-content img{width:30px;height:42px;object-fit:contain}.bootstrap-content svg{color:#4a865d}
+
+/* Original supplied poster artwork with live data overlaid in its blank fields. */
+.original-template-card{position:relative;isolation:isolate;width:min(100%,1000px);aspect-ratio:1/1;min-height:0;padding:0!important;overflow:hidden;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:0 16px 38px #765c3530!important;color:#171717;font-family:Sarabun,sans-serif}
+.original-template-card::before,.original-template-card::after{display:none!important}
+.original-template-background{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none}
+.original-template-photo{position:absolute;z-index:1;left:7.8%;top:47.1%;width:34.3%;height:40.3%;overflow:hidden;border-radius:2px;background:#fffdf7}
+.original-template-photo img{width:100%;height:100%;display:block;object-fit:cover;object-position:center top}
+.original-template-photo-empty{width:100%;height:100%;display:grid;place-items:center;align-content:center;gap:8px;background:linear-gradient(135deg,#fffdf7,#f7f1e5);color:#8b927f;text-align:center;font-size:clamp(11px,1.45vw,18px);font-weight:700;line-height:1.25}
+.original-template-value{position:absolute;z-index:1;margin:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#101010;font-weight:900;line-height:1.15;overflow-wrap:anywhere}
+.original-template-code{left:72.5%;top:16.9%;width:22.6%;height:5.4%;font-size:clamp(20px,3vw,44px)}
+.original-template-name{left:61.8%;top:29.2%;width:34.8%;height:7.3%;padding:0 2.5%;box-sizing:border-box;font-size:clamp(16px,2.45vw,35px)}
+.original-template-advisor{left:61.8%;top:43.3%;width:34.8%;height:7.2%;padding:0 2.5%;box-sizing:border-box;font-size:clamp(15px,2.2vw,31px)}
+.original-template-location{left:62.2%;top:57.5%;width:34%;height:5.8%;padding:0 2%;box-sizing:border-box;font-size:clamp(14px,2vw,29px)}
+.original-template-members{left:75%;top:69.3%;width:17%;height:6.3%;font-size:clamp(22px,3.3vw,50px)}
+.original-template-description{left:63.5%;top:82.4%;width:31%;height:9.5%;align-items:flex-start;justify-content:flex-start;padding:1.2% 1.8%;box-sizing:border-box;text-align:left;font-size:clamp(11px,1.52vw,21px);line-height:1.42;white-space:pre-wrap;overflow:hidden}
+.original-template-date{position:absolute;left:8%;bottom:2%;z-index:1;max-width:36%;color:#fff;font-size:clamp(7px,.85vw,12px);font-weight:700;line-height:1.2;text-shadow:0 1px 2px #24442288}
+.template-card-mini-button{width:94px!important;height:94px!important}.template-card-mini{width:94px!important;height:94px!important}.template-card-mini .original-template-card{width:1000px!important;max-width:none!important;transform:scale(.094)!important;transform-origin:top left!important;box-shadow:none!important}
+@media(max-width:600px){.original-template-card{width:100%}.original-template-date{display:none}}
 
 @media(max-width:850px){
   .app-shell{background:linear-gradient(#fbfaf1ed,#fbfaf1ed),url('/login-background.png') center/cover fixed no-repeat}

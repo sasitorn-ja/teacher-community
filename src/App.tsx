@@ -313,6 +313,7 @@ function App() {
   function exportExcel() { const sheet=XLSX.utils.json_to_sheet(communities.map((x)=>({'วันที่':thaiDate(x.activity_date),'รหัสชุมชน':x.community_code,'ชื่อชุมชน':x.community_name,'ครูที่ปรึกษา':x.advisor_name,'โรงเรียน':x.school_name,'สถานที่':x.location,'จำนวนสมาชิก':x.member_count,'รายละเอียด':x.description}))); sheet['!cols']=[18,12,30,24,26,20,14,60].map((wch)=>({wch})); const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,'ชุมชนคุณครู'); XLSX.writeFile(book,'teacher-community.xlsx') }
   async function exportCard() { if(!cardRef.current||!selected)return; const href=await htmlToImage.toPng(cardRef.current,{pixelRatio:2,backgroundColor:'#fff7eb'});const a=document.createElement('a');a.href=href;a.download=`${selected.community_code}-${selected.community_name}.png`;a.click() }
   imagePickerController = {preview:imagePreview,choose:chooseImage,clear:clearImage}
+  if (loading) return <main className="app-shell app-bootstrap"><div className="bootstrap-content"><img src="/school-crest.png" alt="ตราโรงเรียน"/><LoaderCircle className="spin" size={24}/><span>กำลังเปิดระบบ…</span></div></main>
   if (showLogin) return <LoginScreen settings={settings} accounts={accounts} teacherSearch={teacherSearch} setTeacherSearch={setTeacherSearch} teacherPassword={teacherPassword} setTeacherPassword={setTeacherPassword} showTeacherPassword={showTeacherPassword} setShowTeacherPassword={setShowTeacherPassword} rememberTeacher={rememberTeacher} setRememberTeacher={setRememberTeacher} teacherMatches={teacherMatches} onSubmit={teacherSignIn} onAdmin={()=>{setShowLogin(false);setShowAdminLogin(true)}} notice={notice} onDismissNotice={()=>setNotice('')} />
   const AdminPage = AdminMenu
   return <main className="app-shell">
@@ -586,10 +587,16 @@ function TemplatePanel({communities,accounts,settings,onDeleteDate}:{communities
 }
 
 function TeacherTemplateCard({community,teacher,settings,ref}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;ref?:React.Ref<HTMLDivElement>}) {
-  return <article className="teacher-template-card" ref={ref}>
-    <div className="teacher-template-card-top"><div className="teacher-template-brand"><img src="/school-crest.png" alt="ตราโรงเรียน"/><div><span>กิจกรรม</span><strong>ชุมนุม</strong><small>{settings.school}</small></div></div><div className="teacher-template-code"><span>รหัสชุมนุม:</span><b>{community.community_code}</b></div><div className="teacher-template-sticker">ชุมนุมดี ๆ<br/>มีประโยชน์<br/>สร้างอนาคตได้</div></div>
-    <div className="teacher-template-card-body"><div className="teacher-template-photo-column"><div className="teacher-template-photo">{community.image_url?<img src={community.image_url} alt={community.advisor_name || teacher.teacher_name}/>:<div><ImagePlus size={36}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div><div className="teacher-template-advisor"><span>ครูที่ปรึกษา</span><b>{community.advisor_name || teacher.teacher_name}</b></div></div><div className="teacher-template-info"><div className="teacher-template-field teacher-template-field-wide"><span>ชื่อชุมนุม</span><b>{community.community_name || '-'}</b></div><div className="teacher-template-field-pair"><div className="teacher-template-field"><span>สถานที่</span><b>{community.location || '-'}</b></div><div className="teacher-template-field"><span>จำนวนที่รับ</span><b>{community.member_count ? number(community.member_count) : '-'}</b></div></div><div className="teacher-template-description"><span>รายละเอียดกิจกรรม</span><p>{community.description || 'ร่วมสร้างพื้นที่เรียนรู้ที่เปี่ยมด้วยแรงบันดาลใจ'}</p></div></div></div>
-    <div className="teacher-template-card-footer"><span>{thaiDate(community.activity_date)}</span><span>{settings.school}</span></div>
+  return <article className="teacher-template-card original-template-card" ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
+    <img className="original-template-background" src="/club-template-original.png" alt="" aria-hidden="true"/>
+    <div className="original-template-photo">{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div className="original-template-photo-empty"><ImagePlus size={36}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div>
+    <b className="original-template-value original-template-code">{community.community_code || '-'}</b>
+    <b className="original-template-value original-template-name">{community.community_name || '-'}</b>
+    <b className="original-template-value original-template-advisor">{community.advisor_name || teacher.teacher_name}</b>
+    <b className="original-template-value original-template-location">{community.location || '-'}</b>
+    <b className="original-template-value original-template-members">{community.member_count ? number(community.member_count) : '-'}</b>
+    <p className="original-template-value original-template-description">{community.description || '-'}</p>
+    <span className="original-template-date">{thaiDate(community.activity_date)} · {settings.school}</span>
   </article>
 }
 
