@@ -284,3 +284,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 @media(max-width:820px){.login-screen .login-layout{height:auto;min-height:calc(100svh - 20px);padding-top:18px}}
 @media(max-width:700px){.login-screen .login-layout{min-height:calc(100svh - 16px);padding-top:16px}}
 @media(max-width:700px) and (max-height:740px){.login-screen .login-layout{padding-top:10px}}
+.login-screen.initial-login-backdrop{height:auto;min-height:100svh;overflow:visible;background:#fbfaf1 url('/login-background.png') center/100% 100% no-repeat}
+.login-screen.initial-login-backdrop::before{display:none}
+.credit-footer{background:transparent}
+.credit-footer::before{display:none}
