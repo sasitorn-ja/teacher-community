@@ -206,7 +206,6 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
         <div className="login-options"><label className="remember-option"><input type="checkbox" checked={p.rememberTeacher} onChange={(e)=>p.setRememberTeacher(e.target.checked)}/><span>จดจำฉัน</span></label><button type="button" className="forgot-link" onClick={()=>window.alert('รหัสผ่านคือรหัสชุมชนของคุณ หากจำไม่ได้ กรุณาติดต่อผู้ดูแลระบบ')}>ลืมรหัสผ่าน?</button></div>
         <button className="login-submit" type="submit">เข้าสู่ระบบ <ArrowRight size={23}/></button>
       </form>
-      <div className="login-support">พบปัญหาการใช้งาน? <button type="button" onClick={p.onAdmin}>ติดต่อผู้ดูแลระบบ</button></div>
     </section>
   </section>
   <footer className="login-footer"><span>✦</span> {p.settings.title} · {p.settings.school}</footer>
