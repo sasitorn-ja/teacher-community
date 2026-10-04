@@ -276,6 +276,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 .login-screen .login-layout,.login-screen .login-footer{position:relative;z-index:1}
 @media(max-width:820px){.login-screen.initial-login-backdrop::before{height:240px;opacity:.48}}
 @media(max-width:600px){.login-screen.initial-login-backdrop::before{height:190px;opacity:.36}}
+.credit-footer{width:min(100% - 32px,1130px);margin:0 auto;padding:16px 16px 22px;text-align:center;color:#918b82;font-family:Sarabun,sans-serif;font-size:10px;line-height:1.55;letter-spacing:.05px}.credit-footer-line{height:1px;background:#e8e1d7;margin-bottom:10px}.credit-footer strong{color:#657d58;font-weight:700}.credit-footer a{color:#71866a;text-decoration:none}.credit-footer a:hover{text-decoration:underline}@media(max-width:600px){.credit-footer{width:min(100% - 24px,1130px);padding:13px 8px 18px;font-size:9px}}
 .safety-topbar .brand-mark,.login-brand-mark{background-color:transparent!important;background-image:url('/mascot-logo.png')!important;background-position:center!important;background-repeat:no-repeat!important;background-size:contain!important;box-shadow:none!important;border-radius:0!important}
 .login-screen .login-topbar{display:none}
 .login-screen .login-layout{min-height:calc(100svh - 34px);height:calc(100svh - 34px);padding-top:28px}
