@@ -3,12 +3,35 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 }
 const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
 type TeacherInput = { teacher_name?: string; community_code?: string }
+const normalizeCode = (value: string) => value.normalize('NFKC').replace(/\s+/g, '').trim()
+
+async function assertValidAndAvailableCode(community_code: string, excludeId?: string) {
+  const code = normalizeCode(community_code)
+  if (!/^กก\d{3,}$/.test(code) && code !== 'admin026') {
+    throw new Error('รูปแบบรหัสชุมชนไม่ถูกต้อง กรุณาใช้ เช่น กก126')
+  }
+
+  const { data: existing, error } = await service
+    .from('teacher_profiles')
+    .select('id,teacher_name')
+    .eq('community_code', code)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (existing && existing.id !== excludeId) {
+    throw new Error(`รหัสชุมชน ${code} ถูกใช้โดย ${existing.teacher_name} แล้ว`)
+  }
+}
 
 async function createTeacher(teacher_name: string, community_code: string) {
+  community_code = normalizeCode(community_code)
+  if (!teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมชน')
+  await assertValidAndAvailableCode(community_code)
   const login_email = `teacher-${crypto.randomUUID()}@teacher-community.local`
   const { data, error } = await service.auth.admin.createUser({
     email: login_email,
@@ -31,6 +54,9 @@ async function createTeacher(teacher_name: string, community_code: string) {
 }
 
 async function updateTeacher(id: string, teacher_name: string, community_code: string) {
+  community_code = normalizeCode(community_code)
+  if (!id || !teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมชน')
+  await assertValidAndAvailableCode(community_code, id)
   const auth = await service.auth.admin.updateUserById(id, { password: community_code })
   if (auth.error) throw new Error(auth.error.message)
 
@@ -82,14 +108,22 @@ Deno.serve(async (request) => {
     let created = 0
     let updated = 0
     const errors: string[] = []
+    const batchCodes = new Map<string, string>()
 
     for (const row of rows) {
       const name = String(row.teacher_name ?? '').trim()
-      const code = String(row.community_code ?? '').trim()
+      const code = normalizeCode(String(row.community_code ?? ''))
       if (!name || !code) {
         errors.push(`${name || 'ไม่ทราบชื่อ'}: ข้อมูลไม่ครบ`)
         continue
       }
+      const codeKey = code.toLowerCase()
+      const previousName = batchCodes.get(codeKey)
+      if (previousName && previousName !== name) {
+        errors.push(`${name}: รหัสชุมชน ${code} ซ้ำกับ ${previousName} ในไฟล์นำเข้า`)
+        continue
+      }
+      batchCodes.set(codeKey, name)
 
       try {
         const { data: existing, error: lookupError } = await service
