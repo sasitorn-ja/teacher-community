@@ -38,3 +38,24 @@ create policy "admin deletes communities" on public.communities for delete to au
 -- Bootstrap first admin after creating that person in Authentication > Users:
 -- insert into public.teacher_profiles (id,teacher_name,community_code,login_email,role)
 -- values ('AUTH_USER_UUID','ชื่อแอดมิน','admin026','admin@teacher-community.local','admin');
+
+-- Community image uploads. Files are uploaded only when the form is saved.
+insert into storage.buckets (id, name, public)
+values ('community-images', 'community-images', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "community image uploads" on storage.objects;
+create policy "community image uploads"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'community-images'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "community image deletes" on storage.objects;
+create policy "community image deletes"
+on storage.objects for delete to authenticated
+using (
+  bucket_id = 'community-images'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
