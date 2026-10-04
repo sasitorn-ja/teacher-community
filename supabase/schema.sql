@@ -1,29 +1,38 @@
--- Run once in Supabase SQL Editor after creating the project.
+-- Teacher Community: account-based schema
+-- Teacher name is the username; community code is the Supabase Auth password.
 create table if not exists public.communities (
   id uuid primary key default gen_random_uuid(),
-  community_code text unique not null,
-  community_name text not null check (char_length(community_name) <= 160),
-  advisor_name text not null check (char_length(advisor_name) <= 160),
-  school_name text not null check (char_length(school_name) <= 180),
+  community_code text unique not null check (community_code ~ '^กก[0-9]{3,}$'),
+  community_name text not null, advisor_name text not null, school_name text not null,
   location text not null default '', member_count integer not null default 0 check (member_count >= 0),
-  description text not null default '', image_url text, owner_id uuid references auth.users(id) on delete set null,
+  description text not null default '', image_url text,
+  owner_id uuid unique references auth.users(id) on delete set null,
   created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
-create or replace function public.assign_community_code() returns trigger language plpgsql as $$
-declare next_number integer;
-begin
-  if new.community_code is null or new.community_code = '' then
-    perform pg_advisory_xact_lock(26026);
-    select coalesce(max(nullif(regexp_replace(community_code, '\\D', '', 'g'), '')::integer), 25) + 1 into next_number from public.communities;
-    new.community_code := 'กก' || lpad(next_number::text, 3, '0');
-  end if;
-  new.updated_at := now(); return new;
-end; $$;
-drop trigger if exists communities_assign_code on public.communities;
-create trigger communities_assign_code before insert or update on public.communities for each row execute function public.assign_community_code();
+create table if not exists public.teacher_profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  teacher_name text unique not null,
+  community_code text unique not null check (community_code ~ '^กก[0-9]{3,}$' or community_code = 'admin026'),
+  login_email text unique not null,
+  role text not null default 'teacher' check (role in ('teacher', 'admin')),
+  community_id uuid unique references public.communities(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create or replace function public.is_admin() returns boolean language sql stable security definer set search_path = public as $$
+  select exists(select 1 from public.teacher_profiles where id = auth.uid() and role = 'admin');
+$$;
+create or replace function public.lookup_login_email(p_teacher_name text) returns text language sql stable security definer set search_path = public as $$
+  select login_email from public.teacher_profiles where teacher_name = trim(p_teacher_name) limit 1;
+$$;
+revoke all on function public.lookup_login_email(text) from public;
+grant execute on function public.lookup_login_email(text) to anon, authenticated;
 alter table public.communities enable row level security;
-create policy "Community cards are public" on public.communities for select using (true);
-create policy "Authenticated teachers can create" on public.communities for insert to authenticated with check (auth.uid() = owner_id);
-create policy "Teachers edit their own community" on public.communities for update to authenticated using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
--- Add admin user IDs below after creating their accounts.
--- create policy "Admins manage all communities" on public.communities for all to authenticated using (auth.uid() in ('ADMIN_USER_UUID')) with check (auth.uid() in ('ADMIN_USER_UUID'));
+alter table public.teacher_profiles enable row level security;
+create policy "public community cards" on public.communities for select using (true);
+create policy "teacher reads profile" on public.teacher_profiles for select using (id = auth.uid() or public.is_admin());
+create policy "teacher creates community" on public.communities for insert to authenticated with check (owner_id = auth.uid());
+create policy "teacher edits community" on public.communities for update to authenticated using (owner_id = auth.uid() or public.is_admin()) with check (owner_id = auth.uid() or public.is_admin());
+create policy "admin deletes communities" on public.communities for delete to authenticated using (public.is_admin());
+-- Bootstrap first admin after creating that person in Authentication > Users:
+-- insert into public.teacher_profiles (id,teacher_name,community_code,login_email,role)
+-- values ('AUTH_USER_UUID','ชื่อแอดมิน','admin026','admin@teacher-community.local','admin');
