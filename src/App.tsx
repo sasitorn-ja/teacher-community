@@ -214,7 +214,8 @@ function App() {
       const localAccounts = JSON.parse(localStorage.getItem('teacher-community-accounts') ?? 'null') as TeacherAccount[] | null
       const migratedAccounts = !localAccounts || localAccounts.filter((item)=>item.role==='teacher').length < 100 ? demoAccounts : localAccounts
       const savedSettings = JSON.parse(localStorage.getItem('teacher-community-settings') ?? 'null') as SystemSettings | null
-      const localSettings = savedSettings ? {...defaultSettings,...savedSettings,school:defaultSettings.school,adminUsername:savedSettings.adminUsername || defaultSettings.adminUsername,adminPassword:savedSettings.adminPassword && !['admin2569','admin 1234'].includes(savedSettings.adminPassword) ? savedSettings.adminPassword : defaultSettings.adminPassword} : null
+      const savedPassword = savedSettings?.adminPassword?.replace(/\s+/g,'')
+      const localSettings = savedSettings ? {...defaultSettings,...savedSettings,school:defaultSettings.school,adminUsername:savedSettings.adminUsername || defaultSettings.adminUsername,adminPassword:savedPassword && savedPassword !== 'admin2569' ? savedPassword : defaultSettings.adminPassword} : null
       const restored = migratedAccounts.find((item) => item.id === localStorage.getItem(currentAccountKey)) ?? null
       const localData = localCommunities ?? demos
       setCommunities(localData); setAccounts(migratedAccounts); setSettings(localSettings ?? defaultSettings); setSelectedId(localData[0]?.id ?? null); setCurrent(restored); setView(restored?.role === 'admin' ? 'admin' : 'teacher'); setShowLogin(!restored); if (restored?.role === 'teacher') void refreshSubmissionCount(restored.id,today); setLoading(false); return
