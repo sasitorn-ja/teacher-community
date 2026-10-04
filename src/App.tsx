@@ -124,7 +124,6 @@ function App() {
   const [teacherSearch,setTeacherSearch] = useState('')
   const [teacherPassword,setTeacherPassword] = useState('')
   const [showTeacherPassword,setShowTeacherPassword] = useState(false)
-  const [rememberTeacher,setRememberTeacher] = useState(false)
   const [adminUsername,setAdminUsername] = useState('')
   const [adminPassword,setAdminPassword] = useState('')
   const [search,setSearch] = useState('')
@@ -153,7 +152,7 @@ function App() {
     const needle = normalizeSearch(teacherSearch)
     return accounts.filter((item) => item.role==='teacher' && (!needle || [item.teacher_name,item.community_code,item.login_email ?? ''].some((value)=>normalizeSearch(value).includes(needle)))).slice(0,9)
   },[accounts,teacherSearch])
-  useEffect(() => { const remembered = localStorage.getItem('teacher-community-remembered-name'); if (remembered) { setTeacherSearch(remembered); setRememberTeacher(true) }; void load() }, [])
+  useEffect(() => { localStorage.removeItem('teacher-community-remembered-name'); void load() }, [])
   useEffect(() => { const timer = window.setInterval(() => setToday(todayInBangkok()),60000); return () => window.clearInterval(timer) }, [])
   useEffect(() => {
     if (!hasSupabaseConfig || !supabase) return
@@ -426,8 +425,6 @@ function App() {
     const account = accounts.find((item) => item.role === 'teacher' && item.teacher_name === username)
     if (!account) { flash('ไม่พบชื่อผู้ใช้งาน กรุณาพิมพ์ชื่อแล้วเลือกจากรายชื่อ'); return }
     if (password !== account.community_code) { flash('รหัสผ่านไม่ถูกต้อง กรุณาใช้รหัสชุมชนของคุณ'); return }
-    if (rememberTeacher) localStorage.setItem('teacher-community-remembered-name', account.teacher_name)
-    else localStorage.removeItem('teacher-community-remembered-name')
     selectTeacher(account)
   }
   function selectTeacher(account:TeacherAccount) {
@@ -592,7 +589,7 @@ function App() {
   imagePickerController = {preview:imagePreview,choose:chooseImage,clear:clearImage}
   if (loading) return <main className="app-shell app-bootstrap"><div className="bootstrap-content"><img src="/school-crest.png" alt="ตราโรงเรียน"/><LoaderCircle className="spin" size={24}/><span>กำลังเปิดระบบ…</span></div></main>
   if (connectionError && import.meta.env.PROD && !hasSupabaseConfig) return <ConnectionErrorScreen message={connectionError}/>
-  if (showLogin) return <LoginScreen settings={settings} accounts={accounts} teacherSearch={teacherSearch} setTeacherSearch={setTeacherSearch} teacherPassword={teacherPassword} setTeacherPassword={setTeacherPassword} showTeacherPassword={showTeacherPassword} setShowTeacherPassword={setShowTeacherPassword} rememberTeacher={rememberTeacher} setRememberTeacher={setRememberTeacher} teacherMatches={teacherMatches} onSubmit={teacherSignIn} onAdmin={()=>{setShowLogin(false);setShowAdminLogin(true)}} notice={connectionError || notice} onDismissNotice={()=>setNotice('')} />
+  if (showLogin) return <LoginScreen settings={settings} accounts={accounts} teacherSearch={teacherSearch} setTeacherSearch={setTeacherSearch} teacherPassword={teacherPassword} setTeacherPassword={setTeacherPassword} showTeacherPassword={showTeacherPassword} setShowTeacherPassword={setShowTeacherPassword} teacherMatches={teacherMatches} onSubmit={teacherSignIn} onAdmin={()=>{setShowLogin(false);setShowAdminLogin(true)}} notice={connectionError || notice} onDismissNotice={()=>setNotice('')} />
   const AdminPage = AdminMenu
   return <main className="app-shell">
     <header className="topbar safety-topbar"><button className="brand" onClick={()=>setView('teacher')}><span className="school-crest"><img src="/school-crest.png" alt="ตราโรงเรียน"/></span><span>{settings.title}<small>{settings.term} · {settings.year}</small></span></button><nav className="top-actions">{current&&current.role!=='admin'&&<span className="current-teacher-menu">{current.teacher_name}</span>}{!isAdmin&&<button className={view==='teacher'?'nav-button active':'nav-button'} onClick={()=>setView('teacher')}><Pencil size={16}/> ข้อมูลชุมชน</button>}{isAdmin&&<AdminNavigation tab={adminTab} onChange={(next)=>{setAdminTab(next);window.sessionStorage.setItem(adminTabStorageKey,next)}}/>}{current?<button className="login-button logout-icon-button" aria-label="ออกจากระบบ" onClick={signOut}><LogOut size={16}/></button>:<button className="login-button" onClick={()=>setShowLogin(true)}><LogIn size={16}/> ค้นหาชื่อครู</button>}</nav></header>
@@ -612,8 +609,6 @@ type LoginScreenProps = {
   setTeacherPassword:(value:string)=>void
   showTeacherPassword:boolean
   setShowTeacherPassword:(value:boolean)=>void
-  rememberTeacher:boolean
-  setRememberTeacher:(value:boolean)=>void
   teacherMatches:TeacherAccount[]
   onSubmit:(event:React.FormEvent)=>void
   onAdmin:()=>void
@@ -629,7 +624,6 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
         <label>Username<div className="login-input-wrap"><Search size={21}/><input autoFocus value={p.teacherSearch} onChange={(e)=>p.setTeacherSearch(e.target.value)} placeholder="กรอกชื่อผู้ใช้งาน" autoComplete="username" required/></div></label>
         {p.teacherSearch.trim()&&<div className="username-suggestions">{p.teacherMatches.length?p.teacherMatches.map((teacher)=><button type="button" key={teacher.id} onClick={()=>p.setTeacherSearch(teacher.teacher_name)}><span>{teacher.teacher_name.slice(0,1)}</span><b>{teacher.teacher_name}</b><small>{teacher.community_code}</small></button>):<div>ไม่พบรายชื่อที่ตรงกัน</div>}</div>}
         <label>Password<div className="login-input-wrap"><LockKeyhole size={21}/><input type="text" value={p.teacherPassword} onChange={(e)=>p.setTeacherPassword(e.currentTarget.value)} placeholder="เช่น กก001" inputMode="text" lang="th" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" enterKeyHint="go" required/></div></label>
-        <div className="login-options"><label className="remember-option"><input type="checkbox" checked={p.rememberTeacher} onChange={(e)=>p.setRememberTeacher(e.target.checked)}/><span>จำชื่อครูไว้</span></label></div>
         <button className="login-submit" type="submit">เข้าสู่ระบบ <ArrowRight size={23}/></button>
       </form>
     </section>
