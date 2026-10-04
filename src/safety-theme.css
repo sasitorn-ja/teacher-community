@@ -521,10 +521,11 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
 .template-toolbar input{height:42px;border:1px solid #ddd2c2;border-radius:10px;padding:0 12px;background:#fff;color:#294338;font:inherit}
 .template-table-wrap{overflow:auto;border:1px solid #eee3d5;border-radius:13px}
 .template-table{border-collapse:collapse;width:100%;min-width:780px;background:#fff}
-.template-table th,.template-table td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee9df}
+.template-table th,.template-table td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee9df;vertical-align:top}
 .template-table th{background:#edf4e1;color:#1e5f43;font-weight:700}
 .template-table td{color:#46564b}
 .template-table tr:last-child td{border-bottom:0}
+.template-description-column{min-width:230px}.template-description-cell{min-width:230px;max-width:360px;white-space:pre-wrap;line-height:1.45}.template-actions-column{min-width:92px}.template-actions-cell{white-space:nowrap}.template-delete-button{display:inline-flex;align-items:center;gap:5px;border:1px solid #edb5ac;border-radius:9px;background:#fff3f0;color:#b64e45;padding:8px 10px;font:700 12px Sarabun,sans-serif;cursor:pointer}.template-delete-button:hover{background:#ffe3de;border-color:#dc8f83}
 .danger-button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #edb5ac;border-radius:10px;background:#fff3f0;color:#b64e45;padding:8px 13px;font:700 13px Sarabun,sans-serif;cursor:pointer}
 .danger-button:hover:not(:disabled){background:#ffe3de;border-color:#dc8f83}
 .danger-button:disabled{cursor:not-allowed;opacity:.5}
