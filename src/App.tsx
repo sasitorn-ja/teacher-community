@@ -77,7 +77,9 @@ function App() {
       const updated = existing ? communities.map((community) => community.id === editingId ? newCommunity : community) : [...communities, newCommunity]
       localStorage.setItem('teacher-community-demo', JSON.stringify(updated)); setCommunities(updated); setSelectedId(newCommunity.id); completeSave(existing ? 'แก้ไขข้อมูลชุมชนแล้ว' : `ลงทะเบียนสำเร็จ — รหัสชุมชน ${newCommunity.community_code}`); return
     }
-    const response = editingId ? await supabase!.from('communities').update(payload).eq('id', editingId).select().single() : await supabase!.from('communities').insert(payload).select().single()
+    const { data: authData } = await supabase!.auth.getUser()
+    if (!authData.user) { setNotice('กรุณาเข้าสู่ระบบก่อนลงทะเบียนหรือแก้ไขข้อมูล'); setShowLogin(true); setIsSaving(false); return }
+    const response = editingId ? await supabase!.from('communities').update(payload).eq('id', editingId).select().single() : await supabase!.from('communities').insert({ ...payload, owner_id: authData.user.id }).select().single()
     if (response.error) { setNotice(`บันทึกไม่สำเร็จ: ${response.error.message}`); setIsSaving(false); return }
     const saved = response.data as Community
     setCommunities((current) => editingId ? current.map((item) => item.id === saved.id ? saved : item) : [...current, saved]); setSelectedId(saved.id); completeSave(editingId ? 'แก้ไขข้อมูลชุมชนแล้ว' : `ลงทะเบียนสำเร็จ — รหัสชุมชน ${saved.community_code}`)
