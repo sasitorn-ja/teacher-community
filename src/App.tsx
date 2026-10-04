@@ -509,12 +509,12 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
   {p.notice&&<div className="login-screen-notice"><Check size={17}/>{p.notice}<button onClick={p.onDismissNotice}><X size={16}/></button></div>}
   <section className="login-layout">
     <section className="login-visual"><div className="login-visual-copy"><span className="login-visual-kicker">พื้นที่เล็ก ๆ สำหรับไอเดียและการเรียนรู้</span><h1>ชุมนุมดี ๆ<br/><em>เริ่มต้นที่คุณครู</em></h1><p>จัดการข้อมูลชุมนุมได้ง่าย ๆ ในไม่กี่ขั้นตอน</p></div><img src="/mascot-welcome.png" alt="น้องชุมนม มาสคอตระบบลงทะเบียนชุมนุม"/></section>
-    <section className="login-card initial-login"><div className="login-card-sprout school-logo"><img src="/school-crest.png" alt="ตราโรงเรียน"/></div><h2>ยินดีต้อนรับคุณครู</h2><p>เข้าสู่ระบบเพื่อจัดการข้อมูลชุมนุม</p><div className="login-term">{p.settings.term} · {p.settings.year}</div>
+    <section className="login-card initial-login"><div className="login-card-sprout school-logo"><img src="/school-crest.png" alt="ตราโรงเรียน"/></div><h2>ยินดีต้อนรับคุณครู</h2><p>เข้าสู่ระบบเพื่อจัดการข้อมูลชุมนุม</p><p className="session-note">หลังเข้าสู่ระบบ ระบบจะจำเซสชันไว้ ไม่ต้องเข้าสู่ระบบใหม่ทุกครั้งที่รีเฟรช</p><div className="login-term">{p.settings.term} · {p.settings.year}</div>
       <form className="login-form" onSubmit={p.onSubmit}>
         <label>Username<div className="login-input-wrap"><Search size={21}/><input autoFocus value={p.teacherSearch} onChange={(e)=>p.setTeacherSearch(e.target.value)} placeholder="กรอกชื่อผู้ใช้งาน" autoComplete="username" required/></div></label>
         {p.teacherSearch.trim()&&<div className="username-suggestions">{p.teacherMatches.length?p.teacherMatches.map((teacher)=><button type="button" key={teacher.id} onClick={()=>p.setTeacherSearch(teacher.teacher_name)}><span>{teacher.teacher_name.slice(0,1)}</span><b>{teacher.teacher_name}</b><small>{teacher.community_code}</small></button>):<div>ไม่พบรายชื่อที่ตรงกัน</div>}</div>}
         <label>Password<div className="login-input-wrap"><LockKeyhole size={21}/><input type="text" value={p.teacherPassword} onChange={(e)=>p.setTeacherPassword(e.currentTarget.value)} placeholder="เช่น กก001" inputMode="text" lang="th" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" enterKeyHint="go" required/></div></label>
-        <div className="login-options"><label className="remember-option"><input type="checkbox" checked={p.rememberTeacher} onChange={(e)=>p.setRememberTeacher(e.target.checked)}/><span>จดจำฉัน</span></label></div>
+        <div className="login-options"><label className="remember-option"><input type="checkbox" checked={p.rememberTeacher} onChange={(e)=>p.setRememberTeacher(e.target.checked)}/><span>จำชื่อครูไว้</span></label></div>
         <button className="login-submit" type="submit">เข้าสู่ระบบ <ArrowRight size={23}/></button>
       </form>
     </section>

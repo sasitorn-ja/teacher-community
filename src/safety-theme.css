@@ -179,6 +179,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 .submission-status b{font-size:13px}
 .submission-status span{margin-top:3px;color:#6e8173;font-size:11px;line-height:1.5}
 @media(max-width:600px){.submission-status{margin-top:18px;max-width:none}.submission-status b{font-size:12px}.submission-status span{font-size:10px}}
+.session-note{max-width:310px;margin:8px auto 0!important;color:#6e8173!important;font-size:11px!important;line-height:1.5}
 
 @media(max-width:820px){
   .login-layout{display:flex;flex-direction:column;min-height:0;padding:18px 22px 18px;gap:0}
