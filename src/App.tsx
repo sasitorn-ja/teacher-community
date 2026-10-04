@@ -211,7 +211,7 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
   <CreditFooter />
 </main>}
 
-function CreditFooter(){return <footer className="credit-footer"><div className="credit-footer-line"/><div>ออกแบบและพัฒนาโดย <strong>SASITH WORKS</strong></div><div>รับออกแบบและพัฒนาเว็บไซต์ / เว็บแอปพลิเคชัน</div><a href="mailto:jarungsasitorn@gmail.com">ติดต่อจ้างงาน: jarungsasitorn@gmail.com</a></footer>}
+function CreditFooter(){return <footer className="credit-footer"><div className="credit-footer-line"/><div className="credit-footer-row"><span>ออกแบบและพัฒนาโดย <strong>SASITH WORKS</strong></span><span>รับออกแบบและพัฒนาเว็บไซต์ / เว็บแอปพลิเคชัน</span><a href="mailto:jarungsasitorn@gmail.com">ติดต่อจ้างงาน: jarungsasitorn@gmail.com</a></div></footer>}
 
 type AdminProps={accounts:TeacherAccount[];communities:Community[];filtered:Community[];selected?:Community;search:string;setSearch:(x:string)=>void;loading:boolean;accountForm:typeof emptyAccount;setAccountForm:(x:typeof emptyAccount)=>void;editingAccount:string|null;onSaveAccount:(e:React.FormEvent)=>void;onEditAccount:(x:TeacherAccount)=>void;onDeleteAccount:(x:TeacherAccount)=>void;onCancelAccount:()=>void;onExportExcel:()=>void;onExportCard:()=>void;onSelected:(x:string)=>void;cardRef:React.Ref<HTMLDivElement>;settings:SystemSettings;onSaveSettings:(x:SystemSettings)=>void;storageItems:StorageItem[];storageStats:StorageStats;onDeleteImage:(x:Community)=>void}
 
