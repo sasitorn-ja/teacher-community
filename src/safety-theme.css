@@ -102,7 +102,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 /* Mascot-led login composition inspired by the supplied visual direction. */
 .initial-login-backdrop{background:radial-gradient(circle at 14% 18%,#fff7df 0 13%,transparent 34%),radial-gradient(circle at 85% 82%,#dce7bf 0 9%,transparent 28%),linear-gradient(135deg,#fbf8ea 0%,#f1f4dc 100%);backdrop-filter:none;display:flex;align-items:center;justify-content:center;gap:clamp(10px,3vw,54px);padding:clamp(20px,5vw,70px);overflow:hidden}
 .initial-login-backdrop::before{content:'';order:1;width:clamp(230px,29vw,430px);height:min(74vh,620px);background:url('/mascot-welcome.png') center bottom/contain no-repeat;filter:drop-shadow(0 18px 12px #7c6b4233);flex:0 1 430px;align-self:flex-end;pointer-events:none}
-.initial-login-backdrop::after{content:'ยินดีต้อนรับคุณครู\A ชุมนุมดี ๆ\A เริ่มต้นที่คุณครู';order:0;white-space:pre;color:#214d3c;font-size:clamp(28px,3.25vw,54px);font-weight:800;line-height:1.14;letter-spacing:-1.1px;max-width:420px;text-shadow:0 2px #ffffff90;pointer-events:none}
+.initial-login-backdrop::after{content:'โรงเรียนวิเชียรมาตุ';order:0;white-space:pre;color:#214d3c;font-size:clamp(28px,3.25vw,54px);font-weight:800;line-height:1.14;letter-spacing:-1.1px;max-width:420px;text-shadow:0 2px #ffffff90;pointer-events:none}
 .initial-login{order:2;flex:0 1 500px;border-color:#ffffffd9;box-shadow:0 24px 70px #876f3b26;background:#fffffff2}
 .initial-login .login-kicker{color:#357358}
 .initial-login .login-symbol{background:#edf4df;color:#2d7253}
@@ -179,7 +179,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 .submission-status b{font-size:13px}
 .submission-status span{margin-top:3px;color:#6e8173;font-size:11px;line-height:1.5}
 @media(max-width:600px){.submission-status{margin-top:18px;max-width:none}.submission-status b{font-size:12px}.submission-status span{font-size:10px}}
-.session-note{max-width:310px;margin:8px auto 0!important;color:#6e8173!important;font-size:11px!important;line-height:1.5}
+.logout-icon-button{min-width:42px!important;padding:0 12px!important;justify-content:center}
 .account-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .import-accounts-button{cursor:pointer;display:inline-flex;align-items:center;gap:7px}
 .import-accounts-button input{display:none}
