@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
 import { ArrowRight, BookOpen, Camera, Check, ChevronDown, Database, Download, FileSpreadsheet, Image as ImageIcon, ImagePlus, KeyRound, LayoutDashboard, LoaderCircle, LockKeyhole, LogIn, LogOut, MapPin, Menu, Pencil, Plus, Search, Sparkles, Trash2, UserCog, Users, X } from 'lucide-react'
@@ -913,16 +913,35 @@ function TemplatePanel({communities,accounts,settings,onDeleteDate,onDeleteCommu
   </section>
 }
 
+function FittedTemplateValue({as='b',className,children}:{as?:'b'|'p';className:string;children:React.ReactNode}) {
+  const valueRef = useRef<HTMLElement>(null)
+  useLayoutEffect(()=>{
+    const element = valueRef.current
+    if (!element) return
+    element.style.removeProperty('font-size')
+    const baseSize = Number.parseFloat(window.getComputedStyle(element).fontSize)
+    const minimumSize = Math.max(10,baseSize * .55)
+    let size = baseSize
+    while (size > minimumSize && (element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1)) {
+      size -= .5
+      element.style.fontSize = `${size}px`
+    }
+  },[children])
+  const fittedClassName = `original-template-value ${className}`
+  if (as === 'p') return <p ref={valueRef as unknown as React.Ref<HTMLParagraphElement>} className={fittedClassName}>{children}</p>
+  return <b ref={valueRef as unknown as React.Ref<HTMLElement>} className={fittedClassName}>{children}</b>
+}
+
 function TeacherTemplateCard({community,teacher,settings,ref}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;ref?:React.Ref<HTMLDivElement>}) {
   return <article className="teacher-template-card original-template-card" ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
     <img className="original-template-background" src="/club-template-original.png" alt="" aria-hidden="true"/>
     <div className="original-template-photo">{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div className="original-template-photo-empty"><ImagePlus size={36}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div>
-    <b className="original-template-value original-template-code">{community.community_code || '-'}</b>
-    <b className="original-template-value original-template-name">{community.community_name || '-'}</b>
-    <b className="original-template-value original-template-advisor">{community.advisor_name || teacher.teacher_name}</b>
-    <b className="original-template-value original-template-location">{community.location || '-'}</b>
-    <b className="original-template-value original-template-members">{community.member_count ? number(community.member_count) : '-'}</b>
-    <p className="original-template-value original-template-description">{community.description || '-'}</p>
+    <FittedTemplateValue className="original-template-code">{community.community_code || '-'}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-name">{community.community_name || '-'}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-advisor">{community.advisor_name || teacher.teacher_name}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-location">{community.location || '-'}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-members">{community.member_count ? number(community.member_count) : '-'}</FittedTemplateValue>
+    <FittedTemplateValue as="p" className="original-template-description">{community.description || '-'}</FittedTemplateValue>
     <span className="original-template-date">{thaiDate(community.activity_date)} · {settings.school}</span>
   </article>
 }
