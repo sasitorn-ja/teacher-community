@@ -270,7 +270,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 .safety-topbar .brand-mark,.login-brand-mark{background-color:transparent!important;background-image:url('/mascot-logo.png')!important;background-position:center!important;background-repeat:no-repeat!important;background-size:contain!important;box-shadow:none!important;border-radius:0!important}
 .login-screen .login-topbar{display:none}
 .login-screen .login-layout{min-height:calc(100svh - 34px);height:calc(100svh - 34px);padding-top:28px}
-@media(min-width:821px){.login-visual-copy h1{font-size:clamp(40px,4.1vw,56px)}.login-visual img{height:min(46vh,420px);transform:translateY(22px)}}
+@media(min-width:821px){.login-visual-copy h1{font-size:clamp(40px,4.1vw,56px)}.login-visual img{height:min(40vh,370px);transform:translateY(24px)}}
 @media(max-width:820px){.login-screen .login-layout{height:auto;min-height:calc(100svh - 20px);padding-top:18px}}
 @media(max-width:700px){.login-screen .login-layout{min-height:calc(100svh - 16px);padding-top:16px}}
 @media(max-width:700px) and (max-height:740px){.login-screen .login-layout{padding-top:10px}}
