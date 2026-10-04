@@ -292,3 +292,22 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 .login-screen.initial-login-backdrop{height:100svh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .login-screen .login-layout{height:auto;min-height:0;flex:1}
 .login-screen .credit-footer{flex:0 0 auto}
+
+/* Mobile viewport pass: keep the supplied background edge-to-edge and the
+   login composition centered without creating a second page scroll. */
+body:has(.login-screen),#root:has(.login-screen){background:#fbfaf1}
+.login-screen.initial-login-backdrop{width:100%;max-width:none}
+@media(max-width:820px){
+  .login-screen.initial-login-backdrop{height:100svh;min-height:100svh;overflow:hidden;background-color:#fbfaf1;background-image:url('/login-background.png');background-repeat:no-repeat;background-position:center bottom;background-size:100% 100%}
+  .login-screen .login-layout{flex:1 1 auto;min-height:0;height:auto;padding:clamp(10px,2.5svh,24px) clamp(14px,4vw,28px) 0;overflow:visible}
+  .login-visual{height:clamp(190px,26svh,260px);min-height:0;flex:0 0 clamp(190px,26svh,260px)}
+  .login-visual-copy h1{line-height:1.15;letter-spacing:-.3px;margin:5px 0 7px}
+  .login-visual img{transform:translateY(8px)}
+  .login-card.initial-login{width:100%;max-width:540px;margin-inline:auto}
+  .login-screen .credit-footer{width:min(100% - 24px,1130px);padding-bottom:max(12px,env(safe-area-inset-bottom))}
+}
+@media(max-width:700px) and (max-height:740px){
+  .login-visual{height:clamp(112px,22svh,160px);min-height:0;flex-basis:clamp(112px,22svh,160px)}
+  .login-visual-copy h1{line-height:1.12}
+  .login-visual img{transform:translateY(5px)}
+}
