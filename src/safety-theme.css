@@ -267,6 +267,7 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
 
 /* Long teacher-name results must remain independently scrollable. */
 .username-suggestions{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
+.password-field-input.is-hidden{-webkit-text-security:disc}
 .safety-topbar .brand-mark,.login-brand-mark{background-color:transparent!important;background-image:url('/mascot-logo.png')!important;background-position:center!important;background-repeat:no-repeat!important;background-size:contain!important;box-shadow:none!important;border-radius:0!important}
 .login-screen .login-topbar{display:none}
 .login-screen .login-layout{min-height:calc(100svh - 34px);height:calc(100svh - 34px);padding-top:28px}
