@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
-import { ArrowRight, BookOpen, Check, Download, FileSpreadsheet, ImagePlus, KeyRound, LayoutDashboard, LoaderCircle, LockKeyhole, LogIn, LogOut, MapPin, Pencil, Plus, Search, Sparkles, Trash2, UserCog, Users, X } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, Download, Eye, EyeOff, FileSpreadsheet, ImagePlus, KeyRound, LayoutDashboard, LoaderCircle, LockKeyhole, LogIn, LogOut, MapPin, Pencil, Plus, Search, Sparkles, Trash2, UserCog, Users, X } from 'lucide-react'
 import { supabase, hasSupabaseConfig } from './lib/supabase'
 import { seededTeachers } from './data/teachers'
 import './App.css'
@@ -32,6 +32,9 @@ function App() {
   const [accountForm,setAccountForm] = useState(emptyAccount)
   const [editingAccount,setEditingAccount] = useState<string|null>(null)
   const [teacherSearch,setTeacherSearch] = useState('')
+  const [teacherPassword,setTeacherPassword] = useState('')
+  const [showTeacherPassword,setShowTeacherPassword] = useState(false)
+  const [rememberTeacher,setRememberTeacher] = useState(false)
   const [adminPassword,setAdminPassword] = useState('')
   const [search,setSearch] = useState('')
   const [showLogin,setShowLogin] = useState(true)
@@ -44,7 +47,7 @@ function App() {
   const selected = communities.find((item) => item.id === selectedId) ?? communities[0]
   const filtered = useMemo(() => communities.filter((item) => [item.community_code,item.community_name,item.advisor_name].join(' ').toLowerCase().includes(search.toLowerCase())),[communities,search])
   const teacherMatches = useMemo(() => accounts.filter((item) => item.role==='teacher' && item.teacher_name.includes(teacherSearch.trim())).slice(0,9),[accounts,teacherSearch])
-  useEffect(() => { void load() }, [])
+  useEffect(() => { const remembered = localStorage.getItem('teacher-community-remembered-name'); if (remembered) { setTeacherSearch(remembered); setRememberTeacher(true) }; void load() }, [])
   const flash = (text:string) => { setNotice(text); window.setTimeout(() => setNotice(''),4500) }
   async function load() {
     setLoading(true)
@@ -90,7 +93,18 @@ function App() {
     if (answer.error) { flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
     await load(); setSelectedId(answer.data.id); setEditingId(null); setForm(emptyForm); flash('บันทึกข้อมูลชุมชนแล้ว')
   }
-  function selectTeacher(account:TeacherAccount) { setCurrent(account); setShowLogin(false); setTeacherSearch(''); flash(`ยินดีต้อนรับ ${account.teacher_name}`) }
+  function teacherSignIn(event:React.FormEvent) {
+    event.preventDefault()
+    const username = teacherSearch.trim()
+    const password = teacherPassword.trim()
+    const account = accounts.find((item) => item.role === 'teacher' && item.teacher_name === username)
+    if (!account) { flash('ไม่พบชื่อผู้ใช้งาน กรุณาพิมพ์ชื่อแล้วเลือกจากรายชื่อ'); return }
+    if (password !== account.community_code) { flash('รหัสผ่านไม่ถูกต้อง กรุณาใช้รหัสชุมชนของคุณ'); return }
+    if (rememberTeacher) localStorage.setItem('teacher-community-remembered-name', account.teacher_name)
+    else localStorage.removeItem('teacher-community-remembered-name')
+    selectTeacher(account)
+  }
+  function selectTeacher(account:TeacherAccount) { setCurrent(account); setShowLogin(false); setTeacherSearch(''); setTeacherPassword(''); setShowTeacherPassword(false); flash(`ยินดีต้อนรับ ${account.teacher_name}`) }
   function adminSignIn(event:React.FormEvent) { event.preventDefault(); if (adminPassword !== settings.adminPassword) { flash('รหัสผู้ดูแลไม่ถูกต้อง'); return }; setCurrent(accounts.find((item)=>item.role==='admin') ?? {id:'admin-1',teacher_name:'ผู้ดูแลระบบ',community_code:'',role:'admin'}); setShowAdminLogin(false); setShowLogin(false); setAdminPassword(''); setView('admin'); flash('เข้าสู่ระบบผู้ดูแลแล้ว') }
   function updateSettings(next:SystemSettings) { setSettings(next); localStorage.setItem('teacher-community-settings',JSON.stringify(next)); flash('บันทึกชื่อระบบแล้ว') }
   function signOut() { if (hasSupabaseConfig) void supabase!.auth.signOut(); setCurrent(null); setView('teacher'); setShowLogin(true); flash('ออกจากระบบแล้ว') }
@@ -113,6 +127,7 @@ function App() {
   function editAccount(account:TeacherAccount) { setEditingAccount(account.id); setAccountForm({teacher_name:account.teacher_name,community_code:account.community_code}) }
   function exportExcel() { const sheet=XLSX.utils.json_to_sheet(communities.map((x)=>({'รหัสชุมชน':x.community_code,'ชื่อชุมชน':x.community_name,'ครูที่ปรึกษา':x.advisor_name,'โรงเรียน':x.school_name,'สถานที่':x.location,'จำนวนสมาชิก':x.member_count,'รายละเอียด':x.description}))); sheet['!cols']=[12,30,24,26,20,14,60].map((wch)=>({wch})); const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,'ชุมชนคุณครู'); XLSX.writeFile(book,'teacher-community.xlsx') }
   async function exportCard() { if(!cardRef.current||!selected)return; const href=await htmlToImage.toPng(cardRef.current,{pixelRatio:2,backgroundColor:'#fff7eb'});const a=document.createElement('a');a.href=href;a.download=`${selected.community_code}-${selected.community_name}.png`;a.click() }
+  if (showLogin) return <LoginScreen settings={settings} accounts={accounts} teacherSearch={teacherSearch} setTeacherSearch={setTeacherSearch} teacherPassword={teacherPassword} setTeacherPassword={setTeacherPassword} showTeacherPassword={showTeacherPassword} setShowTeacherPassword={setShowTeacherPassword} rememberTeacher={rememberTeacher} setRememberTeacher={setRememberTeacher} teacherMatches={teacherMatches} onSubmit={teacherSignIn} onAdmin={()=>{setShowLogin(false);setShowAdminLogin(true)}} notice={notice} onDismissNotice={()=>setNotice('')} />
   return <main className="app-shell">
     <header className="topbar safety-topbar"><button className="brand" onClick={()=>setView('teacher')}><span className="brand-mark"><Sparkles size={19}/></span><span>{settings.title}<small>{settings.term} · {settings.year}</small></span></button><nav className="top-actions"><button className={view==='teacher'?'nav-button active':'nav-button'} onClick={()=>setView('teacher')}><Pencil size={16}/> ข้อมูลชุมชน</button><button className={view==='admin'?'nav-button active':'nav-button'} onClick={()=>isAdmin?setView('admin'):setShowAdminLogin(true)}><LayoutDashboard size={16}/> ผู้ดูแลระบบ</button>{current?<button className="login-button" onClick={signOut}><LogOut size={16}/> ออกจากระบบ</button>:<button className="login-button" onClick={()=>setShowLogin(true)}><LogIn size={16}/> ค้นหาชื่อครู</button>}</nav></header>
     {notice&&<div className="notice"><Check size={17}/>{notice}<button onClick={()=>setNotice('')}><X size={16}/></button></div>}
@@ -121,6 +136,43 @@ function App() {
     {showAdminLogin&&<div className="modal-backdrop" onMouseDown={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><section className="login-modal admin-login" onMouseDown={(e)=>e.stopPropagation()}><button className="modal-close" onClick={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><X size={19}/></button><div className="login-symbol"><LockKeyhole size={25}/></div><h2>เข้าสู่ระบบผู้ดูแล</h2><p>สำหรับจัดการรายชื่อครู รหัสชุมชน และชื่อระบบ</p><form onSubmit={adminSignIn}><label>รหัสผู้ดูแล<input autoFocus type="password" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} placeholder="กรอกรหัสผู้ดูแล" required/></label><button className="primary-button full"><LockKeyhole size={17}/> เข้าสู่ระบบผู้ดูแล</button></form></section></div>}
   </main>
 }
+
+type LoginScreenProps = {
+  settings:SystemSettings
+  accounts:TeacherAccount[]
+  teacherSearch:string
+  setTeacherSearch:(value:string)=>void
+  teacherPassword:string
+  setTeacherPassword:(value:string)=>void
+  showTeacherPassword:boolean
+  setShowTeacherPassword:(value:boolean)=>void
+  rememberTeacher:boolean
+  setRememberTeacher:(value:boolean)=>void
+  teacherMatches:TeacherAccount[]
+  onSubmit:(event:React.FormEvent)=>void
+  onAdmin:()=>void
+  notice:string
+  onDismissNotice:()=>void
+}
+function LoginScreen(p:LoginScreenProps){return <main className="login-screen initial-login-backdrop">
+  {p.notice&&<div className="login-screen-notice"><Check size={17}/>{p.notice}<button onClick={p.onDismissNotice}><X size={16}/></button></div>}
+  <header className="login-topbar"><div className="login-brand"><span className="login-brand-mark"><Sparkles size={22}/></span><span><b>{p.settings.title}</b><small>{p.settings.school}</small></span></div><button className="login-help"><span>?</span> ช่วยเหลือ</button></header>
+  <section className="login-layout">
+    <section className="login-visual"><div className="login-visual-copy"><span className="login-visual-kicker">พื้นที่เล็ก ๆ สำหรับไอเดียและการเรียนรู้</span><h1>ชุมนุมดี ๆ<br/><em>เริ่มต้นที่คุณครู</em></h1><p>จัดการข้อมูลชุมนุมได้ง่าย ๆ ในไม่กี่ขั้นตอน</p></div><img src="/mascot-welcome.png" alt="น้องชุมนม มาสคอตระบบลงทะเบียนชุมนุม"/></section>
+    <section className="login-card initial-login"><div className="login-card-sprout">✦</div><h2>ยินดีต้อนรับคุณครู</h2><p>เข้าสู่ระบบเพื่อจัดการข้อมูลชุมนุม</p><div className="login-term">{p.settings.term} · {p.settings.year}</div>
+      <form className="login-form" onSubmit={p.onSubmit}>
+        <label>Username<div className="login-input-wrap"><Search size={21}/><input autoFocus value={p.teacherSearch} onChange={(e)=>p.setTeacherSearch(e.target.value)} placeholder="กรอกชื่อผู้ใช้งาน" autoComplete="username" required/></div></label>
+        {p.teacherSearch.trim()&&<div className="username-suggestions">{p.teacherMatches.length?p.teacherMatches.slice(0,5).map((teacher)=><button type="button" key={teacher.id} onClick={()=>p.setTeacherSearch(teacher.teacher_name)}><span>{teacher.teacher_name.slice(0,1)}</span><b>{teacher.teacher_name}</b><small>{teacher.community_code}</small></button>):<div>ไม่พบรายชื่อที่ตรงกัน</div>}</div>}
+        <label>Password<div className="login-input-wrap"><LockKeyhole size={21}/><input type={p.showTeacherPassword?'text':'password'} value={p.teacherPassword} onChange={(e)=>p.setTeacherPassword(e.target.value)} placeholder="กรอกรหัสชุมชน" autoComplete="current-password" required/><button type="button" className="password-toggle" onClick={()=>p.setShowTeacherPassword(!p.showTeacherPassword)} aria-label={p.showTeacherPassword?'ซ่อนรหัสผ่าน':'แสดงรหัสผ่าน'}>{p.showTeacherPassword?<EyeOff size={21}/>:<Eye size={21}/>}</button></div></label>
+        <div className="login-options"><label className="remember-option"><input type="checkbox" checked={p.rememberTeacher} onChange={(e)=>p.setRememberTeacher(e.target.checked)}/><span>จดจำฉัน</span></label><button type="button" className="forgot-link" onClick={()=>window.alert('รหัสผ่านคือรหัสชุมชนของคุณ หากจำไม่ได้ กรุณาติดต่อผู้ดูแลระบบ')}>ลืมรหัสผ่าน?</button></div>
+        <button className="login-submit" type="submit">เข้าสู่ระบบ <ArrowRight size={23}/></button>
+      </form>
+      <div className="login-support">พบปัญหาการใช้งาน? <button type="button" onClick={p.onAdmin}>ติดต่อผู้ดูแลระบบ</button></div>
+      <button className="admin-login-link" type="button" onClick={p.onAdmin}><LockKeyhole size={15}/> เข้าสู่ระบบผู้ดูแล</button>
+    </section>
+  </section>
+  <footer className="login-footer"><span>✦</span> {p.settings.title} · {p.settings.school}</footer>
+</main>}
 
 type AdminProps={accounts:TeacherAccount[];communities:Community[];filtered:Community[];selected?:Community;search:string;setSearch:(x:string)=>void;loading:boolean;accountForm:typeof emptyAccount;setAccountForm:(x:typeof emptyAccount)=>void;editingAccount:string|null;onSaveAccount:(e:React.FormEvent)=>void;onEditAccount:(x:TeacherAccount)=>void;onDeleteAccount:(x:TeacherAccount)=>void;onCancelAccount:()=>void;onExportExcel:()=>void;onExportCard:()=>void;onSelected:(x:string)=>void;cardRef:React.Ref<HTMLDivElement>;settings:SystemSettings;onSaveSettings:(x:SystemSettings)=>void}
 function AdminPage(p:AdminProps){const [draft,setDraft]=useState(p.settings);useEffect(()=>setDraft(p.settings),[p.settings]);return <section className="admin-page safety-admin"><div className="admin-header"><div><div className="eyebrow"><LayoutDashboard size={15}/> ศูนย์ควบคุมผู้ดูแล</div><h1>{p.settings.title}</h1><p>{p.settings.school} · {p.settings.term} · {p.settings.year}</p></div><button className="export-button" onClick={p.onExportExcel}><FileSpreadsheet size={17}/> Export Excel</button></div><div className="admin-metrics"><Metric value={p.communities.length} label="ชุมนุมที่ลงทะเบียน" icon={<BookOpen/>}/><Metric value={p.accounts.filter((x)=>x.role==='teacher').length} label="รายชื่อครู" icon={<Users/>}/><Metric value="กก001–125" label="รหัสชุมนุมจากไฟล์" icon={<KeyRound/>}/></div><div className="admin-columns"><section className="account-manager"><div className="section-title"><UserCog size={18}/><div><h3>จัดการรายชื่อครู</h3><p>ครูค้นหาและเลือกชื่อตัวเองได้ทันที</p></div></div><form className="account-form" onSubmit={p.onSaveAccount}><label>ชื่อครู<input value={p.accountForm.teacher_name} onChange={(e)=>p.setAccountForm({...p.accountForm,teacher_name:e.target.value})} placeholder="ชื่อ-นามสกุลครู"/></label><label>รหัสชุมนุม<input value={p.accountForm.community_code} onChange={(e)=>p.setAccountForm({...p.accountForm,community_code:e.target.value})} placeholder="เช่น กก126"/></label><div><button className="primary-button"><Plus size={16}/>{p.editingAccount?'บันทึกรายชื่อ':'เพิ่มรายชื่อ'}</button>{p.editingAccount&&<button type="button" className="text-button" onClick={p.onCancelAccount}>ยกเลิก</button>}</div></form><div className="account-list">{p.accounts.filter((x)=>x.role==='teacher').map((a)=><div className="account-row" key={a.id}><span className="account-avatar">{a.teacher_name.slice(0,1)}</span><div><b>{a.teacher_name}</b><small><KeyRound size={11}/>{a.community_code}</small></div><button onClick={()=>p.onEditAccount(a)} title="แก้ไข"><Pencil size={15}/></button><button className="danger" onClick={()=>p.onDeleteAccount(a)} title="ลบ"><Trash2 size={15}/></button></div>)}</div></section><div><section className="system-settings"><div className="section-title"><Pencil size={18}/><div><h3>ชื่อระบบและภาคเรียน</h3><p>เปลี่ยนได้ทุกครั้งที่เปิดภาคเรียนใหม่</p></div></div><div className="settings-grid"><label>ชื่อระบบ<input value={draft.title} onChange={(e)=>setDraft({...draft,title:e.target.value})}/></label><label>โรงเรียน<input value={draft.school} onChange={(e)=>setDraft({...draft,school:e.target.value})}/></label><label>ภาคเรียน<input value={draft.term} onChange={(e)=>setDraft({...draft,term:e.target.value})}/></label><label>ปีการศึกษา<input value={draft.year} onChange={(e)=>setDraft({...draft,year:e.target.value})}/></label><label className="span-2">รหัสผู้ดูแล<input type="password" value={draft.adminPassword} onChange={(e)=>setDraft({...draft,adminPassword:e.target.value})}/></label></div><button className="primary-button" onClick={()=>p.onSaveSettings(draft)}><Check size={16}/> บันทึกชื่อระบบ</button></section><section className="community-preview"><div className="list-head"><h3>ตัวอย่างภาพชุมนุม</h3><button className="export-image" onClick={p.onExportCard}><Download size={16}/> PNG</button></div><label className="search"><Search size={17}/><input value={p.search} onChange={(e)=>p.setSearch(e.target.value)} placeholder="ค้นหาชุมนุม..."/></label><div className="admin-workspace"><aside className="community-list"><div className="list-items">{p.loading?<div className="loading"><LoaderCircle className="spin"/>กำลังโหลด...</div>:p.filtered.map((c)=><button key={c.id} className={c.id===p.selected?.id?'community-item selected':'community-item'} onClick={()=>p.onSelected(c.id)}><span className="item-avatar">{c.community_name.slice(0,1)}</span><span><b>{c.community_name}</b><small>{c.community_code} · {c.member_count} สมาชิก</small></span></button>)}</div></aside><div className="preview-pane">{p.selected?<CommunityCard community={p.selected} ref={p.cardRef}/>:<div className="empty">ยังไม่มีข้อมูลชุมนุม</div>}</div></div></section></div></div></section>}
