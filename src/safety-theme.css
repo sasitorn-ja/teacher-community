@@ -98,3 +98,31 @@ body,button,input,textarea{font-family:Sarabun,sans-serif}
   .initial-login .teacher-results{max-height:245px}
   .teacher-results>button{padding:10px}
 }
+
+/* Mascot-led login composition inspired by the supplied visual direction. */
+.initial-login-backdrop{background:radial-gradient(circle at 14% 18%,#fff7df 0 13%,transparent 34%),radial-gradient(circle at 85% 82%,#dce7bf 0 9%,transparent 28%),linear-gradient(135deg,#fbf8ea 0%,#f1f4dc 100%);backdrop-filter:none;display:flex;align-items:center;justify-content:center;gap:clamp(10px,3vw,54px);padding:clamp(20px,5vw,70px);overflow:hidden}
+.initial-login-backdrop::before{content:'';order:1;width:clamp(230px,29vw,430px);height:min(74vh,620px);background:url('/mascot-welcome.png') center bottom/contain no-repeat;filter:drop-shadow(0 18px 12px #7c6b4233);flex:0 1 430px;align-self:flex-end;pointer-events:none}
+.initial-login-backdrop::after{content:'ยินดีต้อนรับคุณครู\A ชุมนุมดี ๆ\A เริ่มต้นที่คุณครู';order:0;white-space:pre;color:#214d3c;font-size:clamp(28px,3.25vw,54px);font-weight:800;line-height:1.14;letter-spacing:-1.1px;max-width:420px;text-shadow:0 2px #ffffff90;pointer-events:none}
+.initial-login{order:2;flex:0 1 500px;border-color:#ffffffd9;box-shadow:0 24px 70px #876f3b26;background:#fffffff2}
+.initial-login .login-kicker{color:#357358}
+.initial-login .login-symbol{background:#edf4df;color:#2d7253}
+.initial-login .teacher-results{border-color:#cad8be;background:#fbfdf8}
+.initial-login .teacher-results>button{border-bottom-color:#e0e8d6}
+.initial-login .teacher-results>button:hover{background:#f0f6e9}
+.initial-login .teacher-results>button>span{background:#e5efda;color:#397258}
+.initial-login .teacher-results>button>svg{color:#397258}
+.initial-login .admin-entry-button{color:#59705e}
+.initial-login .admin-entry-button:hover{color:#2d7253;background:#f0f6e9}
+
+@media(max-width:900px){
+  .initial-login-backdrop{gap:12px;padding:24px}
+  .initial-login-backdrop::after{font-size:clamp(22px,3.2vw,34px);max-width:250px}
+  .initial-login-backdrop::before{width:clamp(190px,25vw,280px);height:54vh}
+}
+
+@media(max-width:600px){
+  .initial-login-backdrop{display:grid;grid-template-columns:1fr;place-items:center;gap:0;padding:15px 12px;overflow:auto}
+  .initial-login-backdrop::after{display:none}
+  .initial-login-backdrop::before{order:0;width:150px;height:145px;flex:none;align-self:auto;margin-bottom:-5px}
+  .initial-login{order:1;max-height:none;flex:none}
+}
