@@ -168,7 +168,6 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
         <button className="login-submit" type="submit">เข้าสู่ระบบ <ArrowRight size={23}/></button>
       </form>
       <div className="login-support">พบปัญหาการใช้งาน? <button type="button" onClick={p.onAdmin}>ติดต่อผู้ดูแลระบบ</button></div>
-      <button className="admin-login-link" type="button" onClick={p.onAdmin}><LockKeyhole size={15}/> เข้าสู่ระบบผู้ดูแล</button>
     </section>
   </section>
   <footer className="login-footer"><span>✦</span> {p.settings.title} · {p.settings.school}</footer>
