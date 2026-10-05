@@ -5,7 +5,7 @@ create table if not exists public.communities (
   activity_date date not null default current_date,
   community_code text not null check (community_code ~ '^กก[0-9]{3,}$'),
   community_name text not null, advisor_name text not null, school_name text not null,
-  location text not null default '', member_count integer not null default 0 check (member_count >= 0),
+  location text not null default '', member_count integer not null default 22 check (member_count >= 22),
   description text not null default '', image_url text,
   owner_id uuid references auth.users(id) on delete set null,
   unique (owner_id, activity_date),
