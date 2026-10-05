@@ -539,6 +539,7 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
 .danger-button:disabled{cursor:not-allowed;opacity:.5}
 .template-day-summary{display:flex;align-items:center;gap:10px;margin:21px 0 10px;color:#2d7253}
 .template-day-summary b{font-size:15px}.template-day-summary span{color:#819087;font-size:12px}
+.template-panel.admin-panel{padding:24px 0;background:transparent;border:0;border-radius:0;box-shadow:none}
 .template-image-column{width:112px;text-align:center!important}
 .template-card-mini-button{display:block;width:108px;height:86px;padding:0;border:0;border-radius:9px;background:transparent;cursor:zoom-in;overflow:hidden}
 .template-card-mini-button:disabled{cursor:default}
@@ -566,6 +567,7 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
   .template-toolbar-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
   .template-toolbar-actions .danger-button{grid-column:1/-1}
   .template-day-summary{align-items:flex-start;flex-direction:column;gap:2px}
+  .template-panel.admin-panel{padding:18px 0}
 }
 
 /* Keep the shared admin pages compact below the top navigation. */
