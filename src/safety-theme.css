@@ -518,7 +518,8 @@ body:has(.app-shell),#root:has(.app-shell){background:#fbfaf1}
 .admin-menu-page .storage-overview{width:100%;margin:0}
 .template-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:22px 0 18px}
 .template-toolbar label{display:grid;gap:7px;color:#164d3c;font-weight:700}
-.template-toolbar input{height:42px;border:1px solid #ddd2c2;border-radius:10px;padding:0 12px;background:#fff;color:#294338;font:inherit}
+.template-toolbar input,.template-toolbar select{height:42px;border:1px solid #ddd2c2;border-radius:10px;padding:0 12px;background:#fff;color:#294338;font:inherit}
+.template-toolbar select{min-width:220px;cursor:pointer}
 .template-table-wrap{overflow:auto;border:1px solid #eee3d5;border-radius:13px}
 .template-table{border-collapse:collapse;width:100%;min-width:780px;background:#fff}
 .template-table th,.template-table td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee9df;vertical-align:top}
@@ -804,6 +805,7 @@ body:has(.teacher-page) .credit-footer{flex:0 0 auto}
 .template-toolbar-template{align-items:flex-end;justify-content:flex-start;flex-wrap:wrap}
 .template-toolbar-template>label{min-width:190px}
 .template-toolbar-template .template-teacher-filter{min-width:min(100%,360px)}
+.template-toolbar-template .template-variant-picker{min-width:240px}
 .template-toolbar-actions{display:flex;align-items:center;gap:9px;margin-left:auto;flex-wrap:wrap}
 .secondary-button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #cbdcc4;border-radius:10px;background:#f5faef;color:#2d7253;padding:8px 13px;font:700 13px Sarabun,sans-serif;cursor:pointer}
 .secondary-button:hover:not(:disabled){background:#e8f2df}
@@ -834,6 +836,7 @@ body:has(.teacher-page) .credit-footer{flex:0 0 auto}
 .teacher-template-description p{margin:6px 0 0;color:#41594e;font-size:16px;line-height:1.55;white-space:pre-wrap}
 .teacher-template-card-footer{display:flex;justify-content:space-between;gap:14px;padding-top:13px;border-top:1px solid #e8d7c0;color:#718078;font-size:12px;font-weight:700}
 .template-empty-preview{margin-top:0}
+.field-help{display:block;margin-top:5px;color:#7b8b80;font-size:12px;font-weight:600;line-height:1.35}
 @media(max-width:720px){
   .template-toolbar-actions{width:100%;margin-left:0}
   .template-toolbar-actions button{flex:1}

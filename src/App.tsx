@@ -15,6 +15,30 @@ type ImportedTeacherRow = { teacher_name:string; community_code:string }
 const emptyForm = { activity_date:'', community_code:'', community_name:'', advisor_name:'', school_name:'', location:'', member_count:'', description:'', image_url:'' }
 type CommunityForm = typeof emptyForm
 type AdminCommunitySave = (owner:TeacherAccount,form:CommunityForm,imageFile:File|null,imagePreview:string)=>Promise<void>
+const TEMPLATE_DETAIL_MAX_LENGTH = 120
+const limitTemplateDetail = (value:string) => Array.from(value).slice(0,TEMPLATE_DETAIL_MAX_LENGTH).join('')
+type TemplateVariant = 'classic'|'colorful'|'modern'
+type TemplateFieldKey = 'code'|'name'|'advisor'|'location'|'members'|'description'
+type TemplateVariantConfig = { label:string; background:string; photo:React.CSSProperties; fields:Partial<Record<TemplateFieldKey,React.CSSProperties>> }
+const templateVariants:Record<TemplateVariant,TemplateVariantConfig> = {
+  classic:{label:'แบบเดิม · สดใส',background:'/club-template-original.png',photo:{},fields:{}},
+  colorful:{label:'แบบสีพาสเทล · ดอกไม้',background:'/template-colorful.png',photo:{left:'5.2%',top:'27.1%',width:'39.1%',height:'51.7%'},fields:{
+    code:{left:'46.1%',top:'27.2%',width:'47.5%',height:'7.2%',fontSize:'31px',whiteSpace:'nowrap'},
+    name:{left:'46.1%',top:'37.0%',width:'47.5%',height:'9.5%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
+    advisor:{left:'46.1%',top:'48.0%',width:'47.5%',height:'9.7%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
+    location:{left:'46.1%',top:'59.0%',width:'47.5%',height:'7.7%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
+    members:{left:'46.1%',top:'69.8%',width:'47.5%',height:'8.2%',fontSize:'32px',whiteSpace:'nowrap'},
+    description:{left:'47.0%',top:'80.1%',width:'45.5%',height:'14.0%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 1.8%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
+  }},
+  modern:{label:'แบบมินิมอล · น้ำเงินส้ม',background:'/template-modern.png',photo:{left:'3.2%',top:'24.8%',width:'36.6%',height:'48.5%'},fields:{
+    code:{left:'42.1%',top:'24.8%',width:'53.5%',height:'7.7%',fontSize:'31px',whiteSpace:'nowrap'},
+    name:{left:'42.1%',top:'34.3%',width:'53.5%',height:'9.5%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
+    advisor:{left:'42.1%',top:'45.3%',width:'53.5%',height:'9.8%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
+    location:{left:'42.1%',top:'56.5%',width:'53.5%',height:'8.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
+    members:{left:'42.1%',top:'66.6%',width:'53.5%',height:'8.3%',fontSize:'32px',whiteSpace:'nowrap'},
+    description:{left:'42.1%',top:'76.8%',width:'53.5%',height:'16.5%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 2%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
+  }},
+}
 const emptyAccount = { teacher_name:'', community_code:'' }
 const currentAccountKey = 'teacher-community-current-account'
 const adminTabStorageKey = 'teacher-community-admin-tab'
@@ -24,9 +48,8 @@ const demos: Community[] = [
   { id:'demo-2', activity_date:todayInBangkok(), community_code:'กก027', community_name:'นักสร้างสื่อสร้างสรรค์', advisor_name:'นายธนกร วัฒนชัย', school_name:'โรงเรียนวิเชียรมาตุ', location:'ห้องคอมพิวเตอร์ 2', member_count:16, description:'ฝึกออกแบบสื่อการเรียนรู้และสื่อประชาสัมพันธ์อย่างสร้างสรรค์', owner_id:'teacher-2' },
 ]
 const demoAccounts: TeacherAccount[] = [{ id:'admin-1', teacher_name:'ผู้ดูแลระบบ', community_code:'admin2569', role:'admin' }, ...seededTeachers]
-type SystemSettings = { title:string; term:string; year:string; school:string; adminUsername:string; adminPassword:string }
-const defaultSettings:SystemSettings = { title:'ระบบลงทะเบียนชุมนุมคุณครู', term:'ภาคเรียนที่ 2', year:'ปีการศึกษา 2569', school:'โรงเรียนวิเชียรมาตุ', adminUsername:'admin', adminPassword:'admin1234' }
-const adminEmail = String(import.meta.env.VITE_ADMIN_EMAIL ?? '').trim()
+type SystemSettings = { title:string; term:string; year:string; school:string; adminUsername:string; adminPassword?:string }
+const defaultSettings:SystemSettings = { title:'ระบบลงทะเบียนชุมนุมคุณครู', term:'ภาคเรียนที่ 2', year:'ปีการศึกษา 2569', school:'โรงเรียนวิเชียรมาตุ', adminUsername:'admin' }
 const number = (n:number) => new Intl.NumberFormat('th-TH').format(n)
 const thaiDate = (value:string) => value ? new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',day:'numeric',month:'long',year:'numeric'}).format(new Date(`${value}T00:00:00+07:00`)) : '-'
 const formatBytes = (bytes:number) => bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(2)} MB`
@@ -122,10 +145,7 @@ function App() {
   const [editingAccount,setEditingAccount] = useState<string|null>(null)
   const [importingAccounts,setImportingAccounts] = useState(false)
   const [teacherSearch,setTeacherSearch] = useState('')
-  const [teacherPassword,setTeacherPassword] = useState('')
-  const [showTeacherPassword,setShowTeacherPassword] = useState(false)
   const [adminUsername,setAdminUsername] = useState('')
-  const [adminPassword,setAdminPassword] = useState('')
   const [search,setSearch] = useState('')
   const [showLogin,setShowLogin] = useState(true)
   const [showAdminLogin,setShowAdminLogin] = useState(false)
@@ -174,7 +194,7 @@ function App() {
     const record = communities.find((item) => item.owner_id === current.id && item.activity_date === today)
     if (record) {
       setEditingId(record.id)
-      setForm({activity_date:record.activity_date,community_code:record.community_code,community_name:record.community_name,advisor_name:record.advisor_name,school_name:record.school_name,location:record.location,member_count:String(record.member_count),description:record.description,image_url:record.image_url ?? ''})
+      setForm({activity_date:record.activity_date,community_code:record.community_code,community_name:record.community_name,advisor_name:record.advisor_name,school_name:record.school_name,location:record.location,member_count:String(record.member_count),description:limitTemplateDetail(record.description),image_url:record.image_url ?? ''})
       setImageFile(null); setImagePreview(record.image_url ?? '')
     } else {
       setEditingId(null)
@@ -259,8 +279,7 @@ function App() {
       const localAccounts = JSON.parse(localStorage.getItem('teacher-community-accounts') ?? 'null') as TeacherAccount[] | null
       const migratedAccounts = !localAccounts || localAccounts.filter((item)=>item.role==='teacher').length < 100 ? demoAccounts : localAccounts
       const savedSettings = JSON.parse(localStorage.getItem('teacher-community-settings') ?? 'null') as SystemSettings | null
-      const savedPassword = savedSettings?.adminPassword?.replace(/\s+/g,'')
-      const localSettings = savedSettings ? {...defaultSettings,...savedSettings,school:defaultSettings.school,adminUsername:savedSettings.adminUsername || defaultSettings.adminUsername,adminPassword:savedPassword && savedPassword !== 'admin2569' ? savedPassword : defaultSettings.adminPassword} : null
+      const localSettings = savedSettings ? {...defaultSettings,...savedSettings,school:defaultSettings.school,adminUsername:savedSettings.adminUsername || defaultSettings.adminUsername} : null
       const restored = migratedAccounts.find((item) => item.id === localStorage.getItem(currentAccountKey)) ?? null
       const localData = localCommunities ?? demos
       setCommunities(localData); setAccounts(migratedAccounts); setSettings(localSettings ?? defaultSettings); setSelectedId(localData[0]?.id ?? null); setCurrent(restored); setView(restored?.role === 'admin' ? 'admin' : 'teacher'); setShowLogin(!restored); if (restored?.role === 'teacher') void refreshSubmissionCount(restored.id,today); setLoading(false); return
@@ -281,7 +300,7 @@ function App() {
       const directoryAccounts = ((directoryResult.data ?? []) as Array<{id:string;teacher_name:string}>).map((item)=>({id:item.id,teacher_name:item.teacher_name,community_code:'',role:'teacher' as const}))
       if (directoryAccounts.length) setAccounts(directoryAccounts)
       const loadedSettings = settingsResult.data as Partial<SystemSettings> | null
-      if (loadedSettings) setSettings({...defaultSettings,...loadedSettings,adminUsername:defaultSettings.adminUsername,adminPassword:defaultSettings.adminPassword})
+      if (loadedSettings) setSettings({...defaultSettings,...loadedSettings,adminUsername:defaultSettings.adminUsername})
       if (session?.user) {
         const {data: account,error:profileError} = await withRequestTimeout(supabase!.from('teacher_profiles').select('*').eq('id',session.user.id).single(),'โหลดโปรไฟล์ผู้ใช้')
         if (profileError) throw new Error(`โหลดโปรไฟล์ผู้ใช้ไม่สำเร็จ: ${profileError.message}`)
@@ -302,7 +321,7 @@ function App() {
       setLoading(false)
     }
   }
-  function setField(key:keyof typeof emptyForm,value:string) { setForm((now) => ({...now,[key]:key==='school_name'?settings.school:key==='advisor_name'?(current?.teacher_name ?? value):value})) }
+  function setField(key:keyof typeof emptyForm,value:string) { setForm((now) => ({...now,[key]:key==='description'?limitTemplateDetail(value):key==='school_name'?settings.school:key==='advisor_name'?(current?.teacher_name ?? value):value})) }
   async function chooseImage(file:File|null) {
     if (!file) return
     if (!file.type.startsWith('image/')) { flash('กรุณาเลือกไฟล์รูปภาพเท่านั้น'); return }
@@ -327,7 +346,7 @@ function App() {
   }
   function openEditor(community?:Community) {
     if (!current && hasSupabaseConfig) { setShowLogin(true); flash('กรุณาเข้าสู่ระบบก่อนแก้ไขข้อมูล'); return }
-    if (community) { setEditingId(community.id); setImageFile(null); setImagePreview(community.image_url ?? ''); setForm({activity_date:community.activity_date,community_code:community.community_code,community_name:community.community_name,advisor_name:community.advisor_name,school_name:community.school_name,location:community.location,member_count:String(community.member_count),description:community.description,image_url:community.image_url ?? ''}) } else { setEditingId(null); setImageFile(null); setImagePreview(''); setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school}) }
+    if (community) { setEditingId(community.id); setImageFile(null); setImagePreview(community.image_url ?? ''); setForm({activity_date:community.activity_date,community_code:community.community_code,community_name:community.community_name,advisor_name:community.advisor_name,school_name:community.school_name,location:community.location,member_count:String(community.member_count),description:limitTemplateDetail(community.description),image_url:community.image_url ?? ''}) } else { setEditingId(null); setImageFile(null); setImagePreview(''); setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school}) }
     setView('teacher'); window.scrollTo({top:0,behavior:'smooth'})
   }
   function clearSubmittedCommunityForm() {
@@ -345,7 +364,7 @@ function App() {
     try {
       let imageUrl:string|null
       try { imageUrl = await getImageUrlForSave() } catch (error) { flash(error instanceof Error ? error.message : 'อัปโหลดรูปไม่สำเร็จ'); return }
-      const payload = {activity_date:today,community_name:form.community_name.trim(),advisor_name:current.teacher_name,school_name:form.school_name.trim(),location:form.location.trim(),member_count:Number(form.member_count)||0,description:form.description.trim(),image_url:imageUrl}
+      const payload = {activity_date:today,community_name:form.community_name.trim(),advisor_name:current.teacher_name,school_name:form.school_name.trim(),location:form.location.trim(),member_count:Number(form.member_count)||0,description:limitTemplateDetail(form.description.trim()),image_url:imageUrl}
       if (!hasSupabaseConfig) {
         const code = current.community_code
         const existing = communities.find((x)=>x.owner_id===current.id && x.activity_date===today)
@@ -389,7 +408,7 @@ function App() {
       }
     } catch (error) { flash(error instanceof Error ? error.message : 'อัปโหลดรูปไม่สำเร็จ'); return }
     const activityDate = adminForm.activity_date || today
-    const payload = {activity_date:activityDate,community_name:adminForm.community_name.trim(),advisor_name:owner.teacher_name,school_name:adminForm.school_name.trim(),location:adminForm.location.trim(),member_count:Number(adminForm.member_count)||0,description:adminForm.description.trim(),image_url:imageUrl}
+    const payload = {activity_date:activityDate,community_name:adminForm.community_name.trim(),advisor_name:owner.teacher_name,school_name:adminForm.school_name.trim(),location:adminForm.location.trim(),member_count:Number(adminForm.member_count)||0,description:limitTemplateDetail(adminForm.description.trim()),image_url:imageUrl}
     if (!hasSupabaseConfig) {
       const existing = communities.find((item)=>item.owner_id===owner.id && item.activity_date===activityDate)
       const item:Community = existing ? {...existing,...payload,community_code:owner.community_code,owner_id:owner.id,image_url:imageUrl ?? undefined} : {...payload,id:crypto.randomUUID(),community_code:owner.community_code,owner_id:owner.id,image_url:imageUrl ?? undefined}
@@ -403,53 +422,75 @@ function App() {
     if (answer.error) { flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
     await load(false); flash(existing?'บันทึกสำเร็จแล้ว · แก้ไขข้อมูลชุมชนของคุณครูแล้ว':'บันทึกสำเร็จแล้ว · บันทึกข้อมูลชุมชนแทนคุณครูแล้ว')
   }
-  async function signInWithSupabase(username:string,password:string,adminOnly=false) {
-    const lookup = username.includes('@') ? {data:username,error:null} : await withRequestTimeout(supabase!.rpc('lookup_login_email',{p_teacher_name:username}),'ค้นหาบัญชีผู้ใช้')
-    const email = String(lookup.data ?? (adminOnly && adminEmail ? adminEmail : '')).trim()
-    if (!email) { flash('ไม่พบชื่อผู้ใช้งานใน Supabase กรุณาตรวจสอบชื่อหรือบัญชีผู้ใช้'); return }
-    const {data,error} = await withRequestTimeout(supabase!.auth.signInWithPassword({email,password}),'เข้าสู่ระบบ')
-    if (error || !data.user) { flash(`เข้าสู่ระบบไม่สำเร็จ: ${error?.message ?? 'ไม่พบบัญชีผู้ใช้'}`); return }
+  async function signInWithSupabase(username:string,adminOnly=false):Promise<boolean> {
+    const result = await withRequestTimeout(supabase!.functions.invoke('passwordless-login',{body:{username,adminOnly}}),'เข้าสู่ระบบ')
+    if (result.error) { flash(`เข้าสู่ระบบไม่สำเร็จ: ${result.error.message}`); return false }
+    const tokenHash = String((result.data as {token_hash?:string} | null)?.token_hash ?? '').trim()
+    if (!tokenHash) { flash('เข้าสู่ระบบไม่สำเร็จ: ไม่ได้รับ token สำหรับสร้าง session'); return false }
+    const {data,error} = await withRequestTimeout(supabase!.auth.verifyOtp({token_hash:tokenHash,type:'magiclink'}),'สร้าง session ผู้ใช้')
+    if (error || !data.user) { flash(`เข้าสู่ระบบไม่สำเร็จ: ${error?.message ?? 'สร้าง session ไม่สำเร็จ'}`); return false }
     const profileResult = await withRequestTimeout(supabase!.from('teacher_profiles').select('*').eq('id',data.user.id).single(),'โหลดโปรไฟล์ผู้ใช้')
-    if (profileResult.error || !profileResult.data) { flash(`โหลดโปรไฟล์ไม่สำเร็จ: ${profileResult.error?.message ?? 'ไม่พบโปรไฟล์'}`); await supabase!.auth.signOut(); return }
+    if (profileResult.error || !profileResult.data) { flash(`โหลดโปรไฟล์ไม่สำเร็จ: ${profileResult.error?.message ?? 'ไม่พบโปรไฟล์'}`); await supabase!.auth.signOut(); return false }
     const account = profileResult.data as TeacherAccount
-    if (adminOnly && account.role !== 'admin') { flash('บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล'); await supabase!.auth.signOut(); return }
+    if (adminOnly && account.role !== 'admin') { flash('บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล'); await supabase!.auth.signOut(); return false }
     setCurrent(account); setShowLogin(false); setShowAdminLogin(false); setView(account.role === 'admin' ? 'admin' : 'teacher')
     localStorage.setItem(currentAccountKey,account.id)
     if (account.role === 'admin') {
       const {data:allAccounts,error:accountsError} = await withRequestTimeout(supabase!.from('teacher_profiles').select('*').order('teacher_name'),'โหลดบัญชีครู')
-      if (accountsError) { flash(`โหลดบัญชีครูไม่สำเร็จ: ${accountsError.message}`); return }
+      if (accountsError) { flash(`โหลดบัญชีครูไม่สำเร็จ: ${accountsError.message}`); return false }
       setAccounts((allAccounts ?? []) as TeacherAccount[])
     }
     flash(`ยินดีต้อนรับ ${account.teacher_name}`)
+    return true
+  }
+
+  function enterLocalAdmin() {
+    const admin = accounts.find((item)=>item.role==='admin') ?? {id:'admin-1',teacher_name:'ผู้ดูแลระบบ',community_code:'',role:'admin' as const}
+    localStorage.setItem(currentAccountKey,admin.id)
+    setCurrent(admin); setShowLogin(false); setShowAdminLogin(false); setTeacherSearch(''); setAdminUsername(''); setView('admin')
+    flash('เข้าสู่ระบบผู้ดูแลแล้ว · โหมด local สำหรับ localhost')
   }
 
   async function teacherSignIn(event:React.FormEvent) {
     event.preventDefault()
     const username = teacherSearch.trim()
-    const password = teacherPassword.trim()
-    if (hasSupabaseConfig) { await signInWithSupabase(username,password); return }
-    if (username.toLowerCase() === settings.adminUsername.trim().toLowerCase()) {
-      if (password !== settings.adminPassword) { flash('ชื่อผู้ใช้หรือรหัสผู้ดูแลไม่ถูกต้อง'); return }
-      const admin = accounts.find((item)=>item.role==='admin') ?? {id:'admin-1',teacher_name:'ผู้ดูแลระบบ',community_code:'',role:'admin' as const}
-      localStorage.setItem(currentAccountKey,admin.id); setCurrent(admin)
-      setShowLogin(false); setTeacherSearch(''); setTeacherPassword(''); setView('admin')
-      flash('เข้าสู่ระบบผู้ดูแลแล้ว')
+    if (!username) { flash('กรุณากรอก Username'); return }
+    if (hasSupabaseConfig) {
+      try {
+        const signedIn = await signInWithSupabase(username)
+        if (!signedIn && import.meta.env.DEV && username.toLowerCase() === 'admin') enterLocalAdmin()
+      } catch (error) {
+        if (import.meta.env.DEV && username.toLowerCase() === 'admin') enterLocalAdmin()
+        else flash(`เข้าสู่ระบบไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`)
+      }
       return
     }
-    const account = accounts.find((item) => item.role === 'teacher' && item.teacher_name === username)
+    if (username.toLowerCase() === settings.adminUsername.trim().toLowerCase()) {
+      enterLocalAdmin()
+      return
+    }
+    const account = accounts.find((item) => item.role === 'teacher' && normalizeSearch(item.teacher_name) === normalizeSearch(username))
     if (!account) { flash('ไม่พบชื่อผู้ใช้งาน กรุณาพิมพ์ชื่อแล้วเลือกจากรายชื่อ'); return }
-    if (password !== account.community_code) { flash('รหัสผ่านไม่ถูกต้อง กรุณาใช้รหัสชุมชนของคุณ'); return }
     selectTeacher(account)
   }
   function selectTeacher(account:TeacherAccount) {
     if (hasSupabaseConfig) { setTeacherSearch(account.teacher_name); return }
-    localStorage.setItem(currentAccountKey,account.id); setCurrent(account); setShowLogin(false); setTeacherSearch(''); setTeacherPassword(''); setShowTeacherPassword(false); flash(`ยินดีต้อนรับ ${account.teacher_name}`)
+    localStorage.setItem(currentAccountKey,account.id); setCurrent(account); setShowLogin(false); setTeacherSearch(''); flash(`ยินดีต้อนรับ ${account.teacher_name}`)
   }
   async function adminSignIn(event:React.FormEvent) {
     event.preventDefault()
-    if (hasSupabaseConfig) { await signInWithSupabase(adminUsername.trim(),adminPassword,true); return }
-    if (adminUsername.trim().toLowerCase() !== settings.adminUsername.trim().toLowerCase() || adminPassword !== settings.adminPassword) { flash('ชื่อผู้ใช้หรือรหัสผู้ดูแลไม่ถูกต้อง'); return }
-    const admin = accounts.find((item)=>item.role==='admin') ?? {id:'admin-1',teacher_name:'ผู้ดูแลระบบ',community_code:'',role:'admin' as const}; localStorage.setItem(currentAccountKey,admin.id); setCurrent(admin); setShowAdminLogin(false); setShowLogin(false); setAdminUsername(''); setAdminPassword(''); setView('admin'); flash('เข้าสู่ระบบผู้ดูแลแล้ว')
+    if (hasSupabaseConfig) {
+      try {
+        const signedIn = await signInWithSupabase(adminUsername.trim(),true)
+        if (!signedIn && import.meta.env.DEV && adminUsername.trim().toLowerCase() === 'admin') enterLocalAdmin()
+      } catch (error) {
+        if (import.meta.env.DEV && adminUsername.trim().toLowerCase() === 'admin') enterLocalAdmin()
+        else flash(`เข้าสู่ระบบไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`)
+      }
+      return
+    }
+    if (adminUsername.trim().toLowerCase() !== settings.adminUsername.trim().toLowerCase()) { flash('ไม่พบ Username ผู้ดูแลระบบ'); return }
+    enterLocalAdmin()
   }
   async function updateSettings(next:SystemSettings) {
     const fixedSettings = {...next,school:next.school.trim() || defaultSettings.school}
@@ -465,17 +506,13 @@ function App() {
   async function updateAdminAuth(next:SystemSettings) {
     if (!hasSupabaseConfig) { await updateSettings(next); return }
     if (!current || current.role !== 'admin') { flash('กรุณาเข้าสู่ระบบผู้ดูแลก่อน'); return }
-    if (!next.adminUsername.trim() || !next.adminPassword.trim()) { flash('กรุณากรอกชื่อผู้ใช้และรหัสผ่านผู้ดูแล'); return }
-    let passwordResult
-    try { passwordResult = await withRequestTimeout(supabase!.auth.updateUser({password:next.adminPassword.trim()}),'เปลี่ยนรหัสผ่านผู้ดูแล') }
-    catch (error) { flash(`เปลี่ยนรหัสผ่านไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
-    if (passwordResult.error) { flash(`เปลี่ยนรหัสผ่านไม่สำเร็จ: ${passwordResult.error.message}`); return }
+    if (!next.adminUsername.trim()) { flash('กรุณากรอก Username ผู้ดูแล'); return }
     let profileResult
     try { profileResult = await withRequestTimeout(supabase!.from('teacher_profiles').update({teacher_name:next.adminUsername.trim()}).eq('id',current.id).select().single(),'บันทึกชื่อผู้ดูแล') }
     catch (error) { flash(`บันทึกชื่อผู้ดูแลไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
     if (profileResult.error) { flash(`บันทึกชื่อผู้ดูแลไม่สำเร็จ: ${profileResult.error.message}`); return }
     const updated = profileResult.data as TeacherAccount
-    setCurrent(updated); setSettings((currentSettings)=>({...currentSettings,adminUsername:updated.teacher_name,adminPassword:''})); flash('บันทึกบัญชีผู้ดูแลใน Supabase แล้ว')
+    setCurrent(updated); setSettings((currentSettings)=>({...currentSettings,adminUsername:updated.teacher_name})); flash('บันทึก Username ผู้ดูแลใน Supabase แล้ว')
   }
   // Keep this handler available to the admin-account tab in both local and Supabase modes.
   void updateAdminAuth
@@ -617,14 +654,14 @@ function App() {
   imagePickerController = {preview:imagePreview,choose:chooseImage,clear:clearImage}
   if (loading) return <main className="app-shell app-bootstrap"><div className="bootstrap-content"><img src="/school-crest.png" alt="ตราโรงเรียน"/><LoaderCircle className="spin" size={24}/><span>กำลังเปิดระบบ…</span></div></main>
   if (connectionError && import.meta.env.PROD && !hasSupabaseConfig) return <ConnectionErrorScreen message={connectionError}/>
-  if (showLogin) return <LoginScreen settings={settings} accounts={accounts} teacherSearch={teacherSearch} setTeacherSearch={setTeacherSearch} teacherPassword={teacherPassword} setTeacherPassword={setTeacherPassword} showTeacherPassword={showTeacherPassword} setShowTeacherPassword={setShowTeacherPassword} teacherMatches={teacherMatches} onSubmit={teacherSignIn} onAdmin={()=>{setShowLogin(false);setShowAdminLogin(true)}} notice={connectionError || notice} onDismissNotice={()=>setNotice('')} />
+  if (showLogin) return <LoginScreen settings={settings} accounts={accounts} teacherSearch={teacherSearch} setTeacherSearch={setTeacherSearch} teacherMatches={teacherMatches} onSubmit={teacherSignIn} onAdmin={()=>{setShowLogin(false);setShowAdminLogin(true)}} notice={connectionError || notice} onDismissNotice={()=>setNotice('')} />
   const AdminPage = AdminMenu
   return <main className="app-shell">
     <header className="topbar safety-topbar"><button className="brand" onClick={()=>setView('teacher')}><span className="school-crest"><img src="/school-crest.png" alt="ตราโรงเรียน"/></span><span>{settings.title}<small>{settings.term} · {settings.year}</small></span></button><nav className="top-actions">{current&&current.role!=='admin'&&<span className="current-teacher-menu">{current.teacher_name}</span>}{!isAdmin&&<button className={view==='teacher'?'nav-button active':'nav-button'} onClick={()=>setView('teacher')}><Pencil size={16}/> ข้อมูลชุมชน</button>}{isAdmin&&<AdminNavigation tab={adminTab} onChange={(next)=>{setAdminTab(next);window.sessionStorage.setItem(adminTabStorageKey,next)}}/>}{current?<button className="login-button logout-icon-button" aria-label="ออกจากระบบ" onClick={signOut}><LogOut size={16}/></button>:<button className="login-button" onClick={()=>setShowLogin(true)}><LogIn size={16}/> ค้นหาชื่อครู</button>}</nav></header>
     {notice&&<div className="notice"><Check size={17}/>{notice}<button onClick={()=>setNotice('')}><X size={16}/></button></div>}
-    {view==='teacher'?<section className="teacher-page safety-hero"><div className="teacher-intro"><div className="eyebrow"><Sparkles size={15}/> {settings.school}</div><h1>{current?<>สวัสดี<br/><em>{current.teacher_name}</em></>:<>{settings.title}<br/><em>{settings.term}</em></>}</h1><p>{current?`รหัสชุมชนของคุณคือ ${current.community_code} คุณสามารถบันทึกหรือแก้ไขข้อมูลชุมชนของตนเองได้`:'พิมพ์ชื่อของคุณเพื่อค้นหารายชื่อ แล้วกดเลือกเพื่อเข้าใช้งานได้ทันที'}</p>{current&&<div className="submission-status" role="status"><Check size={17}/><div><b>วันนี้ส่งข้อมูลแล้ว {number(todaySubmissionCount)} ครั้ง</b><span>กดบันทึกซ้ำได้ ระบบจะเก็บทุกครั้งและอัปเดตข้อมูลของวันนี้</span></div></div>}{current&&communities.find((x)=>x.owner_id===current.id&&x.activity_date===today)&&<button className="secondary-action" onClick={()=>openEditor(communities.find((x)=>x.owner_id===current.id&&x.activity_date===today))}><Pencil size={15}/> แก้ไขข้อมูลของวันนี้</button>}</div><form className="community-form" onSubmit={saveCommunity}><div className="form-heading"><div className="form-icon"><BookOpen size={21}/></div><div><h2>{editingId?'แก้ไขข้อมูลชุมนุม':'ข้อมูลชุมนุมของคุณ'}</h2><p>{current?`ข้อมูลประจำวันที่ ${thaiDate(today)} · แก้ไขได้ตลอดวันนี้`:'ค้นหาชื่อครูของคุณก่อนจึงจะบันทึกข้อมูลได้'}</p></div></div><fieldset disabled={!current} className="form-grid"><Field label="วันที่"><input className="readonly-field" type="date" value={form.activity_date} readOnly/></Field><Field label="รหัสชุมชน"><input className="readonly-field" value={form.community_code} readOnly/></Field><Field label="ชื่อชุมนุม" required><input value={form.community_name} onChange={(e)=>setField('community_name',e.target.value)} placeholder="เช่น ร้านค้าสวัสดิการโรงเรียน"/></Field><Field label="ครูที่ปรึกษา" required><input value={form.advisor_name} onChange={(e)=>setField('advisor_name',e.target.value)} placeholder="ชื่อ-นามสกุล"/></Field><Field label="โรงเรียน" required><input value={form.school_name} onChange={(e)=>setField('school_name',e.target.value)} placeholder={settings.school}/></Field><Field label="สถานที่"><input value={form.location} onChange={(e)=>setField('location',e.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2"/></Field><Field label="จำนวนที่รับ"><input type="number" min="0" value={form.member_count} onChange={(e)=>setField('member_count',e.target.value)} placeholder="0"/></Field><Field label="ลิงก์รูปภาพ (ไม่บังคับ)"><input value={form.image_url} onChange={(e)=>setField('image_url',e.target.value)} placeholder="https://..."/></Field><Field label="รายละเอียดกิจกรรม" className="span-2"><textarea rows={4} value={form.description} onChange={(e)=>setField('description',e.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/></Field></fieldset><div className="form-footer"><span><LockKeyhole size={15}/>{current?'ข้อมูลประจำวันที่เลือกไว้แก้ไขได้เฉพาะรายชื่อของคุณ':'ข้อมูลจะถูกปลดล็อกเมื่อเลือกรายชื่อแล้ว'}</span><div>{current?<><button type="button" className="text-button" onClick={()=>{setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school});setEditingId(null)}}>ล้างข้อมูล</button><button className="primary-button" disabled={saving}>{saving?<><LoaderCircle size={17} className="spin"/>กำลังบันทึกข้อมูล...</>:<><ArrowRight size={17}/>{editingId?'บันทึกการแก้ไข':'บันทึกข้อมูลวันนี้'}</>}</button></>:<button type="button" className="primary-button" onClick={()=>setShowLogin(true)}><Search size={17}/> ค้นหาชื่อครู</button>}</div></div></form></section>:<AdminPage accounts={accounts} communities={communities} filtered={filtered} selected={selected} search={search} setSearch={setSearch} loading={loading} accountForm={accountForm} setAccountForm={setAccountForm} editingAccount={editingAccount} onSaveAccount={saveAccount} onEditAccount={editAccount} onDeleteAccount={deleteAccount} onCancelAccount={()=>{setEditingAccount(null);setAccountForm(emptyAccount)}} onImportAccounts={importAccounts} importingAccounts={importingAccounts} onExportExcel={exportExcel} onExportCard={exportCard} onSelected={setSelectedId} cardRef={cardRef} settings={settings} onSaveSettings={updateSettings} onSaveAdminAuth={updateAdminAuth} storageItems={storageItems} storageStats={storageStats} onDeleteImage={deleteCommunityImage} onAdminSaveCommunity={saveCommunityForAdmin} onDeleteDate={deleteCommunitiesByDate} onDeleteBeforeDate={deleteCommunitiesBeforeDate} onDeleteCommunity={deleteCommunity} onLoadDatabaseUsage={loadDatabaseUsage} onRunApiAudit={runApiAudit} adminTab={adminTab}/>}<CreditFooter />
+    {view==='teacher'?<section className="teacher-page safety-hero"><div className="teacher-intro"><div className="eyebrow"><Sparkles size={15}/> {settings.school}</div><h1>{current?<>สวัสดี<br/><em>{current.teacher_name}</em></>:<>{settings.title}<br/><em>{settings.term}</em></>}</h1><p>{current?`รหัสชุมชนของคุณคือ ${current.community_code} คุณสามารถบันทึกหรือแก้ไขข้อมูลชุมชนของตนเองได้`:'พิมพ์ชื่อของคุณเพื่อค้นหารายชื่อ แล้วกดเลือกเพื่อเข้าใช้งานได้ทันที'}</p>{current&&<div className="submission-status" role="status"><Check size={17}/><div><b>วันนี้ส่งข้อมูลแล้ว {number(todaySubmissionCount)} ครั้ง</b><span>กดบันทึกซ้ำได้ ระบบจะเก็บทุกครั้งและอัปเดตข้อมูลของวันนี้</span></div></div>}{current&&communities.find((x)=>x.owner_id===current.id&&x.activity_date===today)&&<button className="secondary-action" onClick={()=>openEditor(communities.find((x)=>x.owner_id===current.id&&x.activity_date===today))}><Pencil size={15}/> แก้ไขข้อมูลของวันนี้</button>}</div><form className="community-form" onSubmit={saveCommunity}><div className="form-heading"><div className="form-icon"><BookOpen size={21}/></div><div><h2>{editingId?'แก้ไขข้อมูลชุมนุม':'ข้อมูลชุมนุมของคุณ'}</h2><p>{current?`ข้อมูลประจำวันที่ ${thaiDate(today)} · แก้ไขได้ตลอดวันนี้`:'ค้นหาชื่อครูของคุณก่อนจึงจะบันทึกข้อมูลได้'}</p></div></div><fieldset disabled={!current} className="form-grid"><Field label="วันที่"><input className="readonly-field" type="date" value={form.activity_date} readOnly/></Field><Field label="รหัสชุมชน"><input className="readonly-field" value={form.community_code} readOnly/></Field><Field label="ชื่อชุมนุม" required><input value={form.community_name} onChange={(e)=>setField('community_name',e.target.value)} placeholder="เช่น ร้านค้าสวัสดิการโรงเรียน"/></Field><Field label="ครูที่ปรึกษา" required><input value={form.advisor_name} onChange={(e)=>setField('advisor_name',e.target.value)} placeholder="ชื่อ-นามสกุล"/></Field><Field label="โรงเรียน" required><input value={form.school_name} onChange={(e)=>setField('school_name',e.target.value)} placeholder={settings.school}/></Field><Field label="สถานที่"><input value={form.location} onChange={(e)=>setField('location',e.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2"/></Field><Field label="จำนวนที่รับ"><input type="number" min="0" value={form.member_count} onChange={(e)=>setField('member_count',e.target.value)} placeholder="0"/></Field><Field label="ลิงก์รูปภาพ (ไม่บังคับ)"><input value={form.image_url} onChange={(e)=>setField('image_url',e.target.value)} placeholder="https://..."/></Field><Field label="รายละเอียดกิจกรรม (ไม่เกิน 120 ตัวอักษร)" className="span-2"><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(e)=>setField('description',e.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><small className="field-help">{form.description.length}/{TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร · ระบบจะจัดข้อความให้อยู่ในกรอบ Template</small></Field></fieldset><div className="form-footer"><span><LockKeyhole size={15}/>{current?'ข้อมูลประจำวันที่เลือกไว้แก้ไขได้เฉพาะรายชื่อของคุณ':'ข้อมูลจะถูกปลดล็อกเมื่อเลือกรายชื่อแล้ว'}</span><div>{current?<><button type="button" className="text-button" onClick={()=>{setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school});setEditingId(null)}}>ล้างข้อมูล</button><button className="primary-button" disabled={saving}>{saving?<><LoaderCircle size={17} className="spin"/>กำลังบันทึกข้อมูล...</>:<><ArrowRight size={17}/>{editingId?'บันทึกการแก้ไข':'บันทึกข้อมูลวันนี้'}</>}</button></>:<button type="button" className="primary-button" onClick={()=>setShowLogin(true)}><Search size={17}/> ค้นหาชื่อครู</button>}</div></div></form></section>:<AdminPage accounts={accounts} communities={communities} filtered={filtered} selected={selected} search={search} setSearch={setSearch} loading={loading} accountForm={accountForm} setAccountForm={setAccountForm} editingAccount={editingAccount} onSaveAccount={saveAccount} onEditAccount={editAccount} onDeleteAccount={deleteAccount} onCancelAccount={()=>{setEditingAccount(null);setAccountForm(emptyAccount)}} onImportAccounts={importAccounts} importingAccounts={importingAccounts} onExportExcel={exportExcel} onExportCard={exportCard} onSelected={setSelectedId} cardRef={cardRef} settings={settings} onSaveSettings={updateSettings} onSaveAdminAuth={updateAdminAuth} storageItems={storageItems} storageStats={storageStats} onDeleteImage={deleteCommunityImage} onAdminSaveCommunity={saveCommunityForAdmin} onDeleteDate={deleteCommunitiesByDate} onDeleteBeforeDate={deleteCommunitiesBeforeDate} onDeleteCommunity={deleteCommunity} onLoadDatabaseUsage={loadDatabaseUsage} onRunApiAudit={runApiAudit} adminTab={adminTab}/>}<CreditFooter />
     {showLogin&&<div className="modal-backdrop initial-login-backdrop" onMouseDown={()=>current&&setShowLogin(false)}><section className="login-modal teacher-picker initial-login" onMouseDown={(e)=>e.stopPropagation()}><div className="login-symbol"><Search size={25}/></div><span className="login-kicker">ยินดีต้อนรับ</span><h2>เข้าสู่ระบบ</h2><p>ค้นหาชื่อของคุณ แล้วเลือกชื่อเพื่อเข้าไปกรอกข้อมูลชุมชน</p><label>ชื่อครู<input autoFocus value={teacherSearch} onChange={(e)=>setTeacherSearch(e.target.value)} placeholder="พิมพ์ชื่อครูเพื่อค้นหา..."/></label><div className="teacher-results">{teacherSearch.trim()?teacherMatches.map((teacher)=><button key={teacher.id} onClick={()=>selectTeacher(teacher)}><span>{teacher.teacher_name.slice(0,1)}</span><div><b>{teacher.teacher_name}</b><small><KeyRound size={12}/> รหัสชุมชน {teacher.community_code}</small></div><ArrowRight size={17}/></button>):<div className="search-empty">เริ่มพิมพ์ชื่อ เพื่อค้นหาจาก {number(accounts.filter((item)=>item.role==='teacher').length)} รายชื่อครู</div>}{teacherSearch.trim()&&teacherMatches.length===0&&<div className="search-empty">ไม่พบรายชื่อ ลองพิมพ์คำอื่น หรือแจ้งผู้ดูแลระบบ</div>}</div><button className="admin-entry-button" onClick={()=>{setShowLogin(false);setShowAdminLogin(true)}}><LockKeyhole size={15}/> เข้าสู่ระบบผู้ดูแล</button></section></div>}
-    {showAdminLogin&&<div className="modal-backdrop" onMouseDown={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><section className="login-modal admin-login" onMouseDown={(e)=>e.stopPropagation()}><button className="modal-close" onClick={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><X size={19}/></button><div className="login-symbol"><LockKeyhole size={25}/></div><h2>เข้าสู่ระบบผู้ดูแล</h2><p>สำหรับจัดการรายชื่อครู รหัสชุมชน และชื่อระบบ</p><form onSubmit={adminSignIn}><label>Username<input autoFocus value={adminUsername} onChange={(e)=>setAdminUsername(e.target.value)} placeholder={settings.adminUsername} autoComplete="username" required/></label><label>Password<input type="password" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} placeholder="รหัสผ่านผู้ดูแล" autoComplete="current-password" required/></label><button className="primary-button full"><LockKeyhole size={17}/> เข้าสู่ระบบผู้ดูแล</button></form></section></div>}
+    {showAdminLogin&&<div className="modal-backdrop" onMouseDown={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><section className="login-modal admin-login" onMouseDown={(e)=>e.stopPropagation()}><button className="modal-close" onClick={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><X size={19}/></button><div className="login-symbol"><LockKeyhole size={25}/></div><h2>เข้าสู่ระบบผู้ดูแล</h2><p>พิมพ์ Username `admin` เพื่อเข้าใช้งานโดยไม่ต้องใช้ Password</p><form onSubmit={adminSignIn}><label>Username<input autoFocus value={adminUsername} onChange={(e)=>setAdminUsername(e.target.value)} placeholder="admin" autoComplete="username" required/></label><button className="primary-button full"><LockKeyhole size={17}/> เข้าสู่ระบบผู้ดูแล</button></form></section></div>}
   </main>
 }
 
@@ -633,10 +670,6 @@ type LoginScreenProps = {
   accounts:TeacherAccount[]
   teacherSearch:string
   setTeacherSearch:(value:string)=>void
-  teacherPassword:string
-  setTeacherPassword:(value:string)=>void
-  showTeacherPassword:boolean
-  setShowTeacherPassword:(value:boolean)=>void
   teacherMatches:TeacherAccount[]
   onSubmit:(event:React.FormEvent)=>void
   onAdmin:()=>void
@@ -650,8 +683,7 @@ function LoginScreen(p:LoginScreenProps){return <main className="login-screen in
     <section className="login-card initial-login"><div className="login-card-sprout school-logo"><img src="/school-crest.png" alt="ตราโรงเรียน"/></div><h2>ยินดีต้อนรับคุณครู</h2><p>เข้าสู่ระบบเพื่อจัดการข้อมูลชุมชน</p><div className="login-term">{p.settings.term} · {p.settings.year}</div>
       <form className="login-form" onSubmit={p.onSubmit}>
         <label>Username<div className="login-input-wrap"><Search size={21}/><input autoFocus value={p.teacherSearch} onChange={(e)=>p.setTeacherSearch(e.target.value)} placeholder="กรอกชื่อผู้ใช้งาน" autoComplete="username" required/></div></label>
-        {p.teacherSearch.trim()&&<div className="username-suggestions">{p.teacherMatches.length?p.teacherMatches.map((teacher)=><button type="button" key={teacher.id} onClick={()=>p.setTeacherSearch(teacher.teacher_name)}><span>{teacher.teacher_name.slice(0,1)}</span><b>{teacher.teacher_name}</b><small>{teacher.community_code}</small></button>):<div>ไม่พบรายชื่อที่ตรงกัน</div>}</div>}
-        <label>Password<div className="login-input-wrap"><LockKeyhole size={21}/><input type="text" value={p.teacherPassword} onChange={(e)=>p.setTeacherPassword(e.currentTarget.value)} placeholder="เช่น กก001" inputMode="text" lang="th" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" enterKeyHint="go" required/></div></label>
+        {p.teacherSearch.trim()&&<div className="username-suggestions">{normalizeSearch(p.teacherSearch)==='admin'?<button type="button" onClick={()=>p.setTeacherSearch('admin')}><span>ผู้</span><b>ผู้ดูแลระบบ</b><small>Username admin · role admin</small></button>:p.teacherMatches.length?p.teacherMatches.map((teacher)=><button type="button" key={teacher.id} onClick={()=>p.setTeacherSearch(teacher.teacher_name)}><span>{teacher.teacher_name.slice(0,1)}</span><b>{teacher.teacher_name}</b><small>{teacher.community_code}</small></button>):<div>ไม่พบรายชื่อที่ตรงกัน</div>}</div>}
         <button className="login-submit" type="submit">เข้าสู่ระบบ <ArrowRight size={23}/></button>
       </form>
     </section>
@@ -672,13 +704,13 @@ function ImageLightbox({src,onClose}:{src:string;onClose:()=>void}) {
   return <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูปภาพขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูปภาพ"><X size={20}/></button><img src={src} alt="รูปภาพขนาดเต็ม"/></div>
 }
 
-function TemplateLightbox({community,teacher,settings,onClose}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;onClose:()=>void}) {
+function TemplateLightbox({community,teacher,settings,variant,onClose}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;variant:TemplateVariant;onClose:()=>void}) {
   useEffect(()=>{
     function close(event:KeyboardEvent) { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown',close)
     return ()=>document.removeEventListener('keydown',close)
   },[onClose])
-  return <div className="image-lightbox template-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูป Template ขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูป Template"><X size={20}/></button><div className="template-lightbox-card"><TeacherTemplateCard community={community} teacher={teacher} settings={settings}/></div></div>
+  return <div className="image-lightbox template-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูป Template ขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูป Template"><X size={20}/></button><div className="template-lightbox-card"><TeacherTemplateCard community={community} teacher={teacher} settings={settings} variant={variant}/></div></div>
 }
 
 type AdminProps={accounts:TeacherAccount[];communities:Community[];filtered:Community[];selected?:Community;search:string;setSearch:(x:string)=>void;loading:boolean;accountForm:typeof emptyAccount;setAccountForm:(x:typeof emptyAccount)=>void;editingAccount:string|null;onSaveAccount:(e:React.FormEvent)=>void;onEditAccount:(x:TeacherAccount)=>void;onDeleteAccount:(x:TeacherAccount)=>void;onCancelAccount:()=>void;onImportAccounts:(file:File|null)=>Promise<void>;importingAccounts:boolean;onExportExcel:()=>void;onExportCard:()=>void;onSelected:(x:string)=>void;cardRef:React.Ref<HTMLDivElement>;settings:SystemSettings;onSaveSettings:(x:SystemSettings)=>void;onSaveAdminAuth:(x:SystemSettings)=>Promise<void>;storageItems:StorageItem[];storageStats:StorageStats;onDeleteImage:(x:Community)=>void;onAdminSaveCommunity:AdminCommunitySave;onDeleteDate:(date:string)=>Promise<void>;onDeleteBeforeDate:(date:string)=>Promise<void>;onDeleteCommunity:(community:Community)=>Promise<void>;onLoadDatabaseUsage:()=>Promise<DatabaseUsageRow[]>;onRunApiAudit:()=>Promise<ApiAuditItem[]>;adminTab:AdminTab}
@@ -782,7 +814,7 @@ function AdminCommunityEntryPanel({accounts,communities,settings,onSave}:{accoun
     if (!teacher) return
     const existing = communities.find((item)=>item.owner_id===teacher.id && item.activity_date===form.activity_date)
     if (existing) {
-      setForm({activity_date:existing.activity_date,community_code:existing.community_code,community_name:existing.community_name,advisor_name:existing.advisor_name,school_name:existing.school_name,location:existing.location,member_count:String(existing.member_count),description:existing.description,image_url:existing.image_url ?? ''})
+      setForm({activity_date:existing.activity_date,community_code:existing.community_code,community_name:existing.community_name,advisor_name:existing.advisor_name,school_name:existing.school_name,location:existing.location,member_count:String(existing.member_count),description:limitTemplateDetail(existing.description),image_url:existing.image_url ?? ''})
       setImagePreview(existing.image_url ?? '')
     } else {
       setForm({...emptyForm,activity_date:form.activity_date,community_code:teacher.community_code,advisor_name:teacher.teacher_name,school_name:settings.school})
@@ -790,7 +822,7 @@ function AdminCommunityEntryPanel({accounts,communities,settings,onSave}:{accoun
     }
     setImageFile(null); setImageNotice('')
   },[teacherId,communities,settings.school,form.activity_date])
-  function setField(key:keyof CommunityForm,value:string) { setForm((current)=>({...current,[key]:value})) }
+  function setField(key:keyof CommunityForm,value:string) { setForm((current)=>({...current,[key]:key==='description'?limitTemplateDetail(value):value})) }
   async function chooseImage(file:File|null) {
     if (!file) return
     if (!file.type.startsWith('image/')) { setImageNotice('กรุณาเลือกไฟล์รูปภาพเท่านั้น'); return }
@@ -816,7 +848,7 @@ function AdminCommunityEntryPanel({accounts,communities,settings,onSave}:{accoun
         <label className="field"><span>สถานที่</span><input value={form.location} onChange={(event)=>setField('location',event.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2"/></label>
         <label className="field"><span>จำนวนที่รับ</span><input type="number" min="0" value={form.member_count} onChange={(event)=>setField('member_count',event.target.value)} placeholder="0"/></label>
         <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน</span><div className="image-picker"><input id="admin-community-image-file" type="file" accept="image/*" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><input id="admin-community-image-camera" type="file" accept="image/*" capture="environment" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="admin-community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="admin-community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{imagePreview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={imagePreview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={clearImage}><X size={14}/> ลบรูป</button></div>}<small>{imageNotice || 'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div></div>
-        <label className="field span-2"><span>รายละเอียดกิจกรรม</span><textarea rows={4} value={form.description} onChange={(event)=>setField('description',event.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/></label>
+        <label className="field span-2"><span>รายละเอียดกิจกรรม (ไม่เกิน 120 ตัวอักษร)</span><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(event)=>setField('description',event.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><small className="field-help">{form.description.length}/{TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร · ระบบจะจัดข้อความให้อยู่ในกรอบ Template</small></label>
       </fieldset>
       <div className="admin-entry-footer"><span>{record?'กำลังแก้ไขข้อมูลของคุณครูคนนี้':'กำลังกรอกข้อมูลแทนคุณครูคนนี้'}</span><button className="primary-button"><Check size={16}/> {record?'บันทึกการแก้ไข':'บันทึกข้อมูล'}</button></div>
     </form>
@@ -868,6 +900,7 @@ function TeacherCombobox({teachers,value,onChange,showAll=false}:{teachers:Teach
 
 function TemplatePanel({communities,accounts,settings,onDeleteDate,onDeleteCommunity}:{communities:Community[];accounts:TeacherAccount[];settings:SystemSettings;onDeleteDate:(date:string)=>Promise<void>;onDeleteCommunity:(community:Community)=>Promise<void>}) {
   const [selectedDate,setSelectedDate] = useState(todayInBangkok())
+  const [templateVariant,setTemplateVariant] = useState<TemplateVariant>('classic')
   const teachers = useMemo(()=>accounts.filter((account)=>account.role==='teacher'),[accounts])
   const [selectedTeacherId,setSelectedTeacherId] = useState('all')
   const [page,setPage] = useState(1)
@@ -902,46 +935,54 @@ function TemplatePanel({communities,accounts,settings,onDeleteDate,onDeleteCommu
   }
   return <section className="admin-panel template-panel">
     <div className="section-title"><FileSpreadsheet size={20}/><div><h3>Template ภาพชุมนุม</h3><p>เลือกวันที่และชื่อคุณครู เพื่อสร้างภาพรูปแบบเดียวกันสำหรับใช้งานหรือดาวน์โหลด</p></div></div>
-    <div className="template-toolbar template-toolbar-template"><label>วันที่บันทึก<input type="date" value={selectedDate} onChange={(event)=>{setSelectedDate(event.target.value);setPage(1)}}/></label><label className="template-teacher-filter">คุณครู<TeacherCombobox teachers={teachers} value={selectedTeacherId} showAll onChange={(next)=>{setSelectedTeacherId(next);setPage(1)}}/></label><div className="template-toolbar-actions"><button className="primary-button" disabled={!selectedCommunity} onClick={()=>void exportTemplate()}><Download size={16}/> ดาวน์โหลด PNG</button><button className="secondary-button" disabled={!visibleDaily.length} onClick={exportDaily}><FileSpreadsheet size={16}/> Export Xlsx</button><button className="danger-button" disabled={!daily.length} onClick={()=>void onDeleteDate(selectedDate)}><Trash2 size={16}/> ลบข้อมูลวันนี้</button></div></div>
-    {selectedCommunity && selectedTeacher ? <div className="template-preview-wrap"><TeacherTemplateCard community={selectedCommunity} teacher={selectedTeacher} settings={settings} ref={previewRef}/></div> : <div className="template-empty template-empty-preview"><FileSpreadsheet size={22}/><b>{selectedTeacherId==='all'&&visibleDaily.length?'เลือกชื่อคุณครูเพื่อสร้าง Template PNG':'ยังไม่มีข้อมูลสำหรับสร้าง Template'}</b><span>{selectedTeacherId==='all'&&visibleDaily.length?'ขณะนี้กำลังแสดงข้อมูลคุณครูทั้งหมดด้านล่าง':'เลือกวันที่และคุณครูที่มีการบันทึกข้อมูลแล้ว'}</span></div>}
+    <div className="template-toolbar template-toolbar-template"><label>วันที่บันทึก<input type="date" value={selectedDate} onChange={(event)=>{setSelectedDate(event.target.value);setPage(1)}}/></label><label className="template-teacher-filter">คุณครู<TeacherCombobox teachers={teachers} value={selectedTeacherId} showAll onChange={(next)=>{setSelectedTeacherId(next);setPage(1)}}/></label><label className="template-variant-picker">รูปแบบ Template<select value={templateVariant} onChange={(event)=>setTemplateVariant(event.target.value as TemplateVariant)}>{Object.entries(templateVariants).map(([value,variant])=><option key={value} value={value}>{variant.label}</option>)}</select></label><div className="template-toolbar-actions"><button className="primary-button" disabled={!selectedCommunity} onClick={()=>void exportTemplate()}><Download size={16}/> ดาวน์โหลด PNG</button><button className="secondary-button" disabled={!visibleDaily.length} onClick={exportDaily}><FileSpreadsheet size={16}/> Export Xlsx</button><button className="danger-button" disabled={!daily.length} onClick={()=>void onDeleteDate(selectedDate)}><Trash2 size={16}/> ลบข้อมูลวันนี้</button></div></div>
+    {selectedCommunity && selectedTeacher ? <div className="template-preview-wrap"><TeacherTemplateCard community={selectedCommunity} teacher={selectedTeacher} settings={settings} variant={templateVariant} ref={previewRef}/></div> : <div className="template-empty template-empty-preview"><FileSpreadsheet size={22}/><b>{selectedTeacherId==='all'&&visibleDaily.length?'เลือกชื่อคุณครูเพื่อสร้าง Template PNG':'ยังไม่มีข้อมูลสำหรับสร้าง Template'}</b><span>{selectedTeacherId==='all'&&visibleDaily.length?'ขณะนี้กำลังแสดงข้อมูลคุณครูทั้งหมดด้านล่าง':'เลือกวันที่และคุณครูที่มีการบันทึกข้อมูลแล้ว'}</span></div>}
     {visibleDaily.length ? <>
       <div className="template-day-summary"><b>รูป Template ของวันที่เลือก</b><span>{number(visibleDaily.length)} รายการ · {selectedTeacherId==='all'?'แสดงข้อมูลคุณครูทั้งหมด':'แสดงข้อมูลของคุณครูที่เลือก'}</span></div>
-      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th><th className="template-description-column">รายละเอียดกิจกรรม</th><th className="template-actions-column">จัดการ</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} settings={settings} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td><td className="template-description-cell">{item.description||'-'}</td><td className="template-actions-cell"><button type="button" className="template-delete-button" onClick={()=>void onDeleteCommunity(item)} title="ลบข้อมูลแถวนี้"><Trash2 size={15}/> ลบ</button></td></tr>)}</tbody></table></div>
+      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th><th className="template-description-column">รายละเอียดกิจกรรม</th><th className="template-actions-column">จัดการ</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} settings={settings} variant={templateVariant} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td><td className="template-description-cell">{item.description||'-'}</td><td className="template-actions-cell"><button type="button" className="template-delete-button" onClick={()=>void onDeleteCommunity(item)} title="ลบข้อมูลแถวนี้"><Trash2 size={15}/> ลบ</button></td></tr>)}</tbody></table></div>
       {pageCount>1&&<TemplatePagination page={currentPage} pageCount={pageCount} onPageChange={setPage}/>} 
     </> : <div className="template-empty"><FileSpreadsheet size={22}/><b>ยังไม่มีข้อมูลในวันที่เลือก</b><span>ลองเลือกวันอื่น หรือรอคุณครูบันทึกข้อมูลชุมชน</span></div>}
-    {previewCommunity&&<TemplateLightbox community={previewCommunity} teacher={templateTeacher(previewCommunity)} settings={settings} onClose={()=>setPreviewCommunity(null)}/>}
+    {previewCommunity&&<TemplateLightbox community={previewCommunity} teacher={templateTeacher(previewCommunity)} settings={settings} variant={templateVariant} onClose={()=>setPreviewCommunity(null)}/>}
   </section>
 }
 
-function FittedTemplateValue({as='b',className,children}:{as?:'b'|'p';className:string;children:React.ReactNode}) {
+function FittedTemplateValue({as='b',className,style,children}:{as?:'b'|'p';className:string;style?:React.CSSProperties;children:React.ReactNode}) {
   const valueRef = useRef<HTMLElement>(null)
   useLayoutEffect(()=>{
     const element = valueRef.current
     if (!element) return
+    const configuredFontSize = element.style.fontSize
     element.style.removeProperty('font-size')
-    const baseSize = Number.parseFloat(window.getComputedStyle(element).fontSize)
+    const configuredPixels = configuredFontSize.endsWith('px') ? Number.parseFloat(configuredFontSize) : Number.NaN
+    const baseSize = Number.isFinite(configuredPixels) ? configuredPixels : Number.parseFloat(window.getComputedStyle(element).fontSize)
     const minimumSize = Math.max(10,baseSize * .55)
     let size = baseSize
     while (size > minimumSize && (element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1)) {
       size -= .5
       element.style.fontSize = `${size}px`
     }
-  },[children])
+    element.style.fontSize = `${size}px`
+  },[children,style])
   const fittedClassName = `original-template-value ${className}`
-  if (as === 'p') return <p ref={valueRef as unknown as React.Ref<HTMLParagraphElement>} className={fittedClassName}>{children}</p>
-  return <b ref={valueRef as unknown as React.Ref<HTMLElement>} className={fittedClassName}>{children}</b>
+  if (as === 'p') return <p ref={valueRef as unknown as React.Ref<HTMLParagraphElement>} className={fittedClassName} style={style}>{children}</p>
+  return <b ref={valueRef as unknown as React.Ref<HTMLElement>} className={fittedClassName} style={style}>{children}</b>
 }
 
-function TeacherTemplateCard({community,teacher,settings,ref}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;ref?:React.Ref<HTMLDivElement>}) {
-  return <article className="teacher-template-card original-template-card" ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
-    <img className="original-template-background" src="/club-template-original.png" alt="" aria-hidden="true"/>
-    <div className="original-template-photo">{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div className="original-template-photo-empty"><ImagePlus size={36}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div>
-    <FittedTemplateValue className="original-template-code">{community.community_code || '-'}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-name">{community.community_name || '-'}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-advisor">{community.advisor_name || teacher.teacher_name}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-location">{community.location || '-'}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-members">{community.member_count ? number(community.member_count) : '-'}</FittedTemplateValue>
-    <FittedTemplateValue as="p" className="original-template-description">{community.description || '-'}</FittedTemplateValue>
+function fitTemplateText(value:string,maxLength:number) { return Array.from(value).slice(0,maxLength).join('') }
+
+function TeacherTemplateCard({community,teacher,settings,variant='classic',ref}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;variant?:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
+  const template = templateVariants[variant]
+  const fieldStyle = (key:TemplateFieldKey) => variant==='classic' ? undefined : template.fields[key]
+  const description = fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)
+  return <article className={`teacher-template-card original-template-card template-variant-${variant}`} ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
+    <img className="original-template-background" src={template.background} alt="" aria-hidden="true"/>
+    <div className="original-template-photo" style={variant==='classic'?undefined:template.photo}>{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div className="original-template-photo-empty"><ImagePlus size={36}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div>
+    <FittedTemplateValue className="original-template-code" style={fieldStyle('code')}>{community.community_code || '-'}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-name" style={fieldStyle('name')}>{community.community_name || '-'}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-advisor" style={fieldStyle('advisor')}>{community.advisor_name || teacher.teacher_name}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-location" style={fieldStyle('location')}>{community.location || '-'}</FittedTemplateValue>
+    <FittedTemplateValue className="original-template-members" style={fieldStyle('members')}>{community.member_count ? number(community.member_count) : '-'}</FittedTemplateValue>
+    <FittedTemplateValue as="p" className="original-template-description" style={fieldStyle('description')}>{description}</FittedTemplateValue>
     <span className="original-template-date">{thaiDate(community.activity_date)} · {settings.school}</span>
   </article>
 }
@@ -984,7 +1025,7 @@ function TeacherManagerPanel(p:AdminProps) {
 function AdminAuthPanel({settings,onSaveAuth}:{settings:SystemSettings;onSaveAuth:(settings:SystemSettings)=>Promise<void>}) {
   const [draft,setDraft] = useState(settings)
   useEffect(()=>setDraft(settings),[settings])
-  return <section className="admin-auth-panel admin-panel"><div className="section-title"><LockKeyhole size={18}/><div><h3>สร้างรหัสบัญชีผู้ดูแล</h3><p>แก้ไข Username และ Password สำหรับเข้าสู่ระบบผู้ดูแล</p></div></div><form className="admin-auth-form" onSubmit={(event)=>{event.preventDefault(); if(!draft.adminUsername.trim() || !draft.adminPassword.trim()) return; void onSaveAuth({...draft,adminUsername:draft.adminUsername.trim()})}}><label>Username<input value={draft.adminUsername} onChange={(event)=>setDraft({...draft,adminUsername:event.target.value})} placeholder="admin" autoComplete="username" required/></label><label>Password<input type="text" value={draft.adminPassword} onChange={(event)=>setDraft({...draft,adminPassword:event.target.value})} placeholder="รหัสผ่านผู้ดูแล" autoComplete="new-password" required/></label><p className="admin-auth-note">หลังบันทึกแล้ว ระบบจะใช้บัญชี Supabase นี้ในการเข้าสู่ระบบครั้งถัดไป</p><button className="primary-button"><Check size={16}/> บันทึกบัญชีผู้ดูแล</button></form></section>
+  return <section className="admin-auth-panel admin-panel"><div className="section-title"><LockKeyhole size={18}/><div><h3>บัญชีผู้ดูแล</h3><p>กำหนด Username สำหรับเข้าสู่ระบบโดยไม่ต้องใช้ Password</p></div></div><form className="admin-auth-form" onSubmit={(event)=>{event.preventDefault(); if(!draft.adminUsername.trim()) return; void onSaveAuth({...draft,adminUsername:draft.adminUsername.trim()})}}><label>Username<input value={draft.adminUsername} onChange={(event)=>setDraft({...draft,adminUsername:event.target.value})} placeholder="admin" autoComplete="username" required/></label><p className="admin-auth-note">ผู้ใช้สามารถพิมพ์ Username นี้เพื่อเข้าสู่ระบบผู้ดูแลได้ทันที</p><button className="primary-button"><Check size={16}/> บันทึก Username ผู้ดูแล</button></form></section>
 }
 
 function SystemSettingsPanel({settings,onSaveSettings}:{settings:SystemSettings;onSaveSettings:(settings:SystemSettings)=>void}) {

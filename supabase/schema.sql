@@ -1,5 +1,5 @@
 -- Teacher Community: account-based schema
--- Teacher name is the username; community code is the Supabase Auth password.
+-- Teacher name is the username; login uses the passwordless-login Edge Function.
 create table if not exists public.communities (
   id uuid primary key default gen_random_uuid(),
   activity_date date not null default current_date,

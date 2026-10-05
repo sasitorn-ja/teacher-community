@@ -35,7 +35,9 @@ async function createTeacher(teacher_name: string, community_code: string) {
   const login_email = `teacher-${crypto.randomUUID()}@teacher-community.local`
   const { data, error } = await service.auth.admin.createUser({
     email: login_email,
-    password: community_code,
+    // Auth requires an internal credential, but users sign in through the
+    // passwordless-login function and never receive or enter this value.
+    password: crypto.randomUUID(),
     email_confirm: true,
   })
   if (error || !data.user) throw new Error(error?.message ?? 'Create failed')
@@ -57,7 +59,7 @@ async function updateTeacher(id: string, teacher_name: string, community_code: s
   community_code = normalizeCode(community_code)
   if (!id || !teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมชน')
   await assertValidAndAvailableCode(community_code, id)
-  const auth = await service.auth.admin.updateUserById(id, { password: community_code })
+  const auth = await service.auth.admin.updateUserById(id, { password: crypto.randomUUID() })
   if (auth.error) throw new Error(auth.error.message)
 
   const { error } = await service.from('teacher_profiles')
