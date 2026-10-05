@@ -32,7 +32,7 @@ async function listAll(prefix = '') {
 }
 
 const { data: communities, error } = await supabase.from('communities').select('image_url')
-if (error) throw new Error(`อ่านข้อมูลชุมชนไม่สำเร็จ: ${error.message}`)
+if (error) throw new Error(`อ่านข้อมูลชุมนุมไม่สำเร็จ: ${error.message}`)
 const usedPaths = new Set()
 for (const { image_url } of communities) {
   const match = image_url?.match(new RegExp(`/storage/v1/object/(?:public|sign|authenticated)/${BUCKET}/([^?]+)`))

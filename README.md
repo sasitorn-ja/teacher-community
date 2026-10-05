@@ -1,6 +1,6 @@
 # Teacher Community
 
-เว็บลงทะเบียนชุมชนคุณครู สร้างด้วย React + TypeScript พร้อมหน้าครูและแดชบอร์ดแอดมินสำหรับส่งออก Excel/ภาพ PNG
+เว็บลงทะเบียนชุมนุมคุณครู สร้างด้วย React + TypeScript พร้อมหน้าครูและแดชบอร์ดแอดมินสำหรับส่งออก Excel/ภาพ PNG
 
 ## Run locally
 ```bash
@@ -25,10 +25,10 @@ npm run dev
 
 ครูเข้าสู่ระบบด้วย **ชื่อ-นามสกุลครู** อย่างเดียว ส่วน Username `admin` จะเข้าสู่ role ผู้ดูแลโดยไม่ต้องใช้ Password ระบบจะสร้าง one-time Auth session ผ่าน Edge Function เพื่อให้สิทธิ์ RLS เดิมยังทำงานได้
 
-รหัสชุมชนสร้างที่ฐานข้อมูลแบบ atomic เริ่มจาก `กก026` จึงไม่ซ้ำแม้มีการลงทะเบียนพร้อมกันจำนวนมาก
+รหัสชุมนุมสร้างที่ฐานข้อมูลแบบ atomic เริ่มจาก `กก026` จึงไม่ซ้ำแม้มีการลงทะเบียนพร้อมกันจำนวนมาก
 
 ## LINE Login
-LINE Login ใช้แทนการล็อกอินด้วยรหัสชุมชนได้ในอนาคต แต่เวอร์ชันนี้ใช้รูปแบบบัญชีที่แอดมินจัดการตามโจทย์. อย่าเก็บ channel secret, service-role key หรือ Supabase password ใน Vite environment.
+LINE Login ใช้แทนการล็อกอินด้วยรหัสชุมนุมได้ในอนาคต แต่เวอร์ชันนี้ใช้รูปแบบบัญชีที่แอดมินจัดการตามโจทย์. อย่าเก็บ channel secret, service-role key หรือ Supabase password ใน Vite environment.
 
 ## Vercel
 เพิ่ม `VITE_SUPABASE_URL` และ `VITE_SUPABASE_ANON_KEY` ใน Environment Variables ของ Vercel (เลือก Production และ Preview ตามที่ใช้งาน) แล้วกด Redeploy ใหม่ทุกครั้งหลังเพิ่มหรือแก้ค่า ใช้ anon key เท่านั้น ไม่ใช่ service role key หรือ database password.

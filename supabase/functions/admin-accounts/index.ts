@@ -14,7 +14,7 @@ const normalizeCode = (value: string) => value.normalize('NFKC').replace(/\s+/g,
 async function assertValidAndAvailableCode(community_code: string, excludeId?: string) {
   const code = normalizeCode(community_code)
   if (!/^กก\d{3,}$/.test(code) && code !== 'admin026') {
-    throw new Error('รูปแบบรหัสชุมชนไม่ถูกต้อง กรุณาใช้ เช่น กก126')
+    throw new Error('รูปแบบรหัสชุมนุมไม่ถูกต้อง กรุณาใช้ เช่น กก126')
   }
 
   const { data: existing, error } = await service
@@ -24,13 +24,13 @@ async function assertValidAndAvailableCode(community_code: string, excludeId?: s
     .maybeSingle()
   if (error) throw new Error(error.message)
   if (existing && existing.id !== excludeId) {
-    throw new Error(`รหัสชุมชน ${code} ถูกใช้โดย ${existing.teacher_name} แล้ว`)
+    throw new Error(`รหัสชุมนุม ${code} ถูกใช้โดย ${existing.teacher_name} แล้ว`)
   }
 }
 
 async function createTeacher(teacher_name: string, community_code: string) {
   community_code = normalizeCode(community_code)
-  if (!teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมชน')
+  if (!teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมนุม')
   await assertValidAndAvailableCode(community_code)
   const login_email = `teacher-${crypto.randomUUID()}@teacher-community.local`
   const { data, error } = await service.auth.admin.createUser({
@@ -57,7 +57,7 @@ async function createTeacher(teacher_name: string, community_code: string) {
 
 async function updateTeacher(id: string, teacher_name: string, community_code: string) {
   community_code = normalizeCode(community_code)
-  if (!id || !teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมชน')
+  if (!id || !teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมนุม')
   await assertValidAndAvailableCode(community_code, id)
   const auth = await service.auth.admin.updateUserById(id, { password: crypto.randomUUID() })
   if (auth.error) throw new Error(auth.error.message)
@@ -122,7 +122,7 @@ Deno.serve(async (request) => {
       const codeKey = code.toLowerCase()
       const previousName = batchCodes.get(codeKey)
       if (previousName && previousName !== name) {
-        errors.push(`${name}: รหัสชุมชน ${code} ซ้ำกับ ${previousName} ในไฟล์นำเข้า`)
+        errors.push(`${name}: รหัสชุมนุม ${code} ซ้ำกับ ${previousName} ในไฟล์นำเข้า`)
         continue
       }
       batchCodes.set(codeKey, name)
