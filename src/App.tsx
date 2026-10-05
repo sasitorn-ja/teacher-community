@@ -24,19 +24,19 @@ const templateVariants:Record<TemplateVariant,TemplateVariantConfig> = {
   classic:{label:'แบบเดิม · สดใส',background:'/club-template-original.png',photo:{},fields:{}},
   colorful:{label:'แบบสีพาสเทล · ดอกไม้',background:'/template-colorful.png',photo:{left:'5.2%',top:'27.1%',width:'39.1%',height:'51.7%'},fields:{
     code:{left:'46.1%',top:'27.2%',width:'47.5%',height:'7.2%',fontSize:'31px',whiteSpace:'nowrap'},
-    name:{left:'46.1%',top:'37.0%',width:'47.5%',height:'9.5%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
-    advisor:{left:'46.1%',top:'48.0%',width:'47.5%',height:'9.7%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
-    location:{left:'46.1%',top:'59.0%',width:'47.5%',height:'7.7%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
-    members:{left:'46.1%',top:'69.8%',width:'47.5%',height:'8.2%',fontSize:'32px',whiteSpace:'nowrap'},
-    description:{left:'47.0%',top:'80.1%',width:'45.5%',height:'14.0%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 1.8%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
+    name:{left:'46.1%',top:'39.0%',width:'47.5%',height:'7.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
+    advisor:{left:'46.1%',top:'50.6%',width:'47.5%',height:'7.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
+    location:{left:'46.1%',top:'60.9%',width:'47.5%',height:'5.8%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
+    members:{left:'46.1%',top:'71.2%',width:'47.5%',height:'5.5%',fontSize:'32px',whiteSpace:'nowrap'},
+    description:{left:'47.0%',top:'81.9%',width:'45.5%',height:'10.5%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 1.8%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
   }},
   modern:{label:'แบบมินิมอล · น้ำเงินส้ม',background:'/template-modern.png',photo:{left:'3.2%',top:'24.8%',width:'36.6%',height:'48.5%'},fields:{
     code:{left:'42.1%',top:'24.8%',width:'53.5%',height:'7.7%',fontSize:'31px',whiteSpace:'nowrap'},
-    name:{left:'42.1%',top:'34.3%',width:'53.5%',height:'9.5%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
-    advisor:{left:'42.1%',top:'45.3%',width:'53.5%',height:'9.8%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
-    location:{left:'42.1%',top:'56.5%',width:'53.5%',height:'8.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
-    members:{left:'42.1%',top:'66.6%',width:'53.5%',height:'8.3%',fontSize:'32px',whiteSpace:'nowrap'},
-    description:{left:'42.1%',top:'76.8%',width:'53.5%',height:'16.5%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 2%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
+    name:{left:'42.1%',top:'38.0%',width:'53.5%',height:'6.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
+    advisor:{left:'42.1%',top:'49.0%',width:'53.5%',height:'6.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
+    location:{left:'42.1%',top:'60.1%',width:'53.5%',height:'5.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
+    members:{left:'42.1%',top:'70.0%',width:'53.5%',height:'5.5%',fontSize:'32px',whiteSpace:'nowrap'},
+    description:{left:'42.1%',top:'79.5%',width:'53.5%',height:'11.5%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 2%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
   }},
 }
 const emptyAccount = { teacher_name:'', community_code:'' }
@@ -708,13 +708,13 @@ function ImageLightbox({src,onClose}:{src:string;onClose:()=>void}) {
   return <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูปภาพขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูปภาพ"><X size={20}/></button><img src={src} alt="รูปภาพขนาดเต็ม"/></div>
 }
 
-function TemplateLightbox({community,teacher,settings,variant,onClose}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;variant:TemplateVariant;onClose:()=>void}) {
+function TemplateLightbox({community,teacher,variant,onClose}:{community:Community;teacher:TeacherAccount;variant:TemplateVariant;onClose:()=>void}) {
   useEffect(()=>{
     function close(event:KeyboardEvent) { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown',close)
     return ()=>document.removeEventListener('keydown',close)
   },[onClose])
-  return <div className="image-lightbox template-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูป Template ขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูป Template"><X size={20}/></button><div className="template-lightbox-card"><TeacherTemplateCard community={community} teacher={teacher} settings={settings} variant={variant}/></div></div>
+  return <div className="image-lightbox template-lightbox" role="dialog" aria-modal="true" aria-label="ดูรูป Template ขนาดเต็ม" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><button type="button" className="image-lightbox-close" onClick={onClose} aria-label="ปิดรูป Template"><X size={20}/></button><div className="template-lightbox-card"><TeacherTemplateCard community={community} teacher={teacher} variant={variant}/></div></div>
 }
 
 type AdminProps={accounts:TeacherAccount[];communities:Community[];filtered:Community[];selected?:Community;search:string;setSearch:(x:string)=>void;loading:boolean;accountForm:typeof emptyAccount;setAccountForm:(x:typeof emptyAccount)=>void;editingAccount:string|null;onSaveAccount:(e:React.FormEvent)=>void;onEditAccount:(x:TeacherAccount)=>void;onDeleteAccount:(x:TeacherAccount)=>void;onCancelAccount:()=>void;onImportAccounts:(file:File|null)=>Promise<void>;importingAccounts:boolean;onExportExcel:()=>void;onExportCard:()=>void;onSelected:(x:string)=>void;cardRef:React.Ref<HTMLDivElement>;settings:SystemSettings;onSaveSettings:(x:SystemSettings)=>void;onSaveAdminAuth:(x:SystemSettings)=>Promise<void>;storageItems:StorageItem[];storageStats:StorageStats;onDeleteImage:(x:Community)=>void;onAdminSaveCommunity:AdminCommunitySave;onDeleteDate:(date:string)=>Promise<void>;onDeleteBeforeDate:(date:string)=>Promise<void>;onDeleteCommunity:(community:Community)=>Promise<void>;onLoadDatabaseUsage:()=>Promise<DatabaseUsageRow[]>;onRunApiAudit:()=>Promise<ApiAuditItem[]>;adminTab:AdminTab}
@@ -795,7 +795,7 @@ function AdminMenu(p:AdminProps) {
   return <section className="admin-page safety-admin admin-menu-page">
     {!hasSupabaseConfig&&<div className="storage-note"><b>กำลังใช้งานโหมดตัวอย่าง</b> รายชื่อและข้อมูลที่เห็นยังมาจากเครื่องนี้ ไม่ใช่ Supabase · เพิ่มค่า `VITE_SUPABASE_URL` และ `VITE_SUPABASE_ANON_KEY` ใน `.env.local` แล้วรีสตาร์ตเว็บเพื่อใช้ข้อมูลจริง</div>}
     {p.adminTab==='entry'&&<AdminCommunityEntryPanel accounts={p.accounts} communities={p.communities} settings={p.settings} onSave={p.onAdminSaveCommunity}/>}
-    {p.adminTab==='template'&&<TemplatePanel communities={p.communities} accounts={p.accounts} settings={p.settings} onDeleteDate={p.onDeleteDate} onDeleteCommunity={p.onDeleteCommunity}/>}
+    {p.adminTab==='template'&&<TemplatePanel communities={p.communities} accounts={p.accounts} onDeleteDate={p.onDeleteDate} onDeleteCommunity={p.onDeleteCommunity}/>}
     {p.adminTab==='storage'&&<StorageManager items={p.storageItems} stats={p.storageStats} communities={p.communities} onDeleteImage={p.onDeleteImage} onDeleteBeforeDate={p.onDeleteBeforeDate} onLoadDatabaseUsage={p.onLoadDatabaseUsage} onRunApiAudit={p.onRunApiAudit}/>}
     {p.adminTab==='teachers'&&<TeacherManagerPanel {...p}/>}
     {p.adminTab==='settings'&&<SystemSettingsPanel settings={p.settings} onSaveSettings={p.onSaveSettings}/>}
@@ -902,7 +902,7 @@ function TeacherCombobox({teachers,value,onChange,showAll=false}:{teachers:Teach
   </div>
 }
 
-function TemplatePanel({communities,accounts,settings,onDeleteDate,onDeleteCommunity}:{communities:Community[];accounts:TeacherAccount[];settings:SystemSettings;onDeleteDate:(date:string)=>Promise<void>;onDeleteCommunity:(community:Community)=>Promise<void>}) {
+function TemplatePanel({communities,accounts,onDeleteDate,onDeleteCommunity}:{communities:Community[];accounts:TeacherAccount[];onDeleteDate:(date:string)=>Promise<void>;onDeleteCommunity:(community:Community)=>Promise<void>}) {
   const [selectedDate,setSelectedDate] = useState(todayInBangkok())
   const [templateVariant,setTemplateVariant] = useState<TemplateVariant>('classic')
   const teachers = useMemo(()=>accounts.filter((account)=>account.role==='teacher'),[accounts])
@@ -940,13 +940,13 @@ function TemplatePanel({communities,accounts,settings,onDeleteDate,onDeleteCommu
   return <section className="admin-panel template-panel">
     <div className="section-title"><FileSpreadsheet size={20}/><div><h3>Template ภาพชุมนุม</h3><p>เลือกวันที่และชื่อคุณครู เพื่อสร้างภาพรูปแบบเดียวกันสำหรับใช้งานหรือดาวน์โหลด</p></div></div>
     <div className="template-toolbar template-toolbar-template"><label>วันที่บันทึก<input type="date" value={selectedDate} onChange={(event)=>{setSelectedDate(event.target.value);setPage(1)}}/></label><label className="template-teacher-filter">คุณครู<TeacherCombobox teachers={teachers} value={selectedTeacherId} showAll onChange={(next)=>{setSelectedTeacherId(next);setPage(1)}}/></label><label className="template-variant-picker">รูปแบบ Template<select value={templateVariant} onChange={(event)=>setTemplateVariant(event.target.value as TemplateVariant)}>{Object.entries(templateVariants).map(([value,variant])=><option key={value} value={value}>{variant.label}</option>)}</select></label><div className="template-toolbar-actions"><button className="primary-button" disabled={!selectedCommunity} onClick={()=>void exportTemplate()}><Download size={16}/> ดาวน์โหลด PNG</button><button className="secondary-button" disabled={!visibleDaily.length} onClick={exportDaily}><FileSpreadsheet size={16}/> Export Xlsx</button><button className="danger-button" disabled={!daily.length} onClick={()=>void onDeleteDate(selectedDate)}><Trash2 size={16}/> ลบข้อมูลวันนี้</button></div></div>
-    {selectedCommunity && selectedTeacher ? <div className="template-preview-wrap"><TeacherTemplateCard community={selectedCommunity} teacher={selectedTeacher} settings={settings} variant={templateVariant} ref={previewRef}/></div> : <div className="template-empty template-empty-preview"><FileSpreadsheet size={22}/><b>{selectedTeacherId==='all'&&visibleDaily.length?'เลือกชื่อคุณครูเพื่อสร้าง Template PNG':'ยังไม่มีข้อมูลสำหรับสร้าง Template'}</b><span>{selectedTeacherId==='all'&&visibleDaily.length?'ขณะนี้กำลังแสดงข้อมูลคุณครูทั้งหมดด้านล่าง':'เลือกวันที่และคุณครูที่มีการบันทึกข้อมูลแล้ว'}</span></div>}
+    {selectedCommunity && selectedTeacher ? <div className="template-preview-wrap"><TeacherTemplateCard community={selectedCommunity} teacher={selectedTeacher} variant={templateVariant} ref={previewRef}/></div> : <div className="template-empty template-empty-preview"><FileSpreadsheet size={22}/><b>{selectedTeacherId==='all'&&visibleDaily.length?'เลือกชื่อคุณครูเพื่อสร้าง Template PNG':'ยังไม่มีข้อมูลสำหรับสร้าง Template'}</b><span>{selectedTeacherId==='all'&&visibleDaily.length?'ขณะนี้กำลังแสดงข้อมูลคุณครูทั้งหมดด้านล่าง':'เลือกวันที่และคุณครูที่มีการบันทึกข้อมูลแล้ว'}</span></div>}
     {visibleDaily.length ? <>
       <div className="template-day-summary"><b>รูป Template ของวันที่เลือก</b><span>{number(visibleDaily.length)} รายการ · {selectedTeacherId==='all'?'แสดงข้อมูลคุณครูทั้งหมด':'แสดงข้อมูลของคุณครูที่เลือก'}</span></div>
-      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th><th className="template-description-column">รายละเอียดกิจกรรม</th><th className="template-actions-column">จัดการ</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} settings={settings} variant={templateVariant} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td><td className="template-description-cell">{item.description||'-'}</td><td className="template-actions-cell"><button type="button" className="template-delete-button" onClick={()=>void onDeleteCommunity(item)} title="ลบข้อมูลแถวนี้"><Trash2 size={15}/> ลบ</button></td></tr>)}</tbody></table></div>
+      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th><th className="template-description-column">รายละเอียดกิจกรรม</th><th className="template-actions-column">จัดการ</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} variant={templateVariant} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td><td className="template-description-cell">{item.description||'-'}</td><td className="template-actions-cell"><button type="button" className="template-delete-button" onClick={()=>void onDeleteCommunity(item)} title="ลบข้อมูลแถวนี้"><Trash2 size={15}/> ลบ</button></td></tr>)}</tbody></table></div>
       {pageCount>1&&<TemplatePagination page={currentPage} pageCount={pageCount} onPageChange={setPage}/>} 
     </> : <div className="template-empty"><FileSpreadsheet size={22}/><b>ยังไม่มีข้อมูลในวันที่เลือก</b><span>ลองเลือกวันอื่น หรือรอคุณครูบันทึกข้อมูลชุมชน</span></div>}
-    {previewCommunity&&<TemplateLightbox community={previewCommunity} teacher={templateTeacher(previewCommunity)} settings={settings} variant={templateVariant} onClose={()=>setPreviewCommunity(null)}/>}
+    {previewCommunity&&<TemplateLightbox community={previewCommunity} teacher={templateTeacher(previewCommunity)} variant={templateVariant} onClose={()=>setPreviewCommunity(null)}/>}
   </section>
 }
 
@@ -955,26 +955,27 @@ function FittedTemplateValue({as='b',className,style,children}:{as?:'b'|'p';clas
   useLayoutEffect(()=>{
     const element = valueRef.current
     if (!element) return
+    const text = element.querySelector<HTMLElement>('.original-template-value-text') ?? element
     const configuredFontSize = element.style.fontSize
     element.style.removeProperty('font-size')
     const configuredPixels = configuredFontSize.endsWith('px') ? Number.parseFloat(configuredFontSize) : Number.NaN
     const baseSize = Number.isFinite(configuredPixels) ? configuredPixels : Number.parseFloat(window.getComputedStyle(element).fontSize)
     const minimumSize = Math.max(10,baseSize * .55)
     let size = baseSize
-    while (size > minimumSize && (element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1)) {
+    while (size > minimumSize && (text.scrollWidth > text.clientWidth + 1 || text.scrollHeight > text.clientHeight + 1)) {
       size -= .5
       element.style.fontSize = `${size}px`
     }
     element.style.fontSize = `${size}px`
   },[children,style])
   const fittedClassName = `original-template-value ${className}`
-  if (as === 'p') return <p ref={valueRef as unknown as React.Ref<HTMLParagraphElement>} className={fittedClassName} style={style}>{children}</p>
-  return <b ref={valueRef as unknown as React.Ref<HTMLElement>} className={fittedClassName} style={style}>{children}</b>
+  if (as === 'p') return <p ref={valueRef as unknown as React.Ref<HTMLParagraphElement>} className={fittedClassName} style={style}><span className="original-template-value-text">{children}</span></p>
+  return <b ref={valueRef as unknown as React.Ref<HTMLElement>} className={fittedClassName} style={style}><span className="original-template-value-text">{children}</span></b>
 }
 
 function fitTemplateText(value:string,maxLength:number) { return Array.from(value).slice(0,maxLength).join('') }
 
-function TeacherTemplateCard({community,teacher,settings,variant='classic',ref}:{community:Community;teacher:TeacherAccount;settings:SystemSettings;variant?:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
+function TeacherTemplateCard({community,teacher,variant='classic',ref}:{community:Community;teacher:TeacherAccount;variant?:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
   const template = templateVariants[variant]
   const fieldStyle = (key:TemplateFieldKey) => variant==='classic' ? undefined : template.fields[key]
   const description = fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)
@@ -987,7 +988,6 @@ function TeacherTemplateCard({community,teacher,settings,variant='classic',ref}:
     <FittedTemplateValue className="original-template-location" style={fieldStyle('location')}>{community.location || '-'}</FittedTemplateValue>
     <FittedTemplateValue className="original-template-members" style={fieldStyle('members')}>{community.member_count ? number(community.member_count) : '-'}</FittedTemplateValue>
     <FittedTemplateValue as="p" className="original-template-description" style={fieldStyle('description')}>{description}</FittedTemplateValue>
-    <span className="original-template-date">{thaiDate(community.activity_date)} · {settings.school}</span>
   </article>
 }
 
