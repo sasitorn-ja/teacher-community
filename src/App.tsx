@@ -128,24 +128,29 @@ function withRequestTimeout<T>(operation:PromiseLike<T>,label:string,timeoutMs=1
   })
 }
 const fileToDataUrl = (file:File) => new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ')); reader.readAsDataURL(file) })
-const compressImage = (file:File,maxBytes=500*1024) => new Promise<File>((resolve,reject) => {
+const MAX_IMAGE_BYTES = 250*1024
+const compressImage = (file:File,maxBytes=MAX_IMAGE_BYTES) => new Promise<File>((resolve,reject) => {
   const reader = new FileReader()
   reader.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'))
   reader.onload = () => {
     const image = new Image()
     image.onerror = () => reject(new Error('เปิดไฟล์รูปไม่สำเร็จ'))
     image.onload = () => {
-      const maxDimension = 1600
+      const maxDimension = 1200
       const scale = Math.min(1,maxDimension / Math.max(image.width,image.height))
       const canvas = document.createElement('canvas')
       canvas.width = Math.max(1,Math.round(image.width * scale)); canvas.height = Math.max(1,Math.round(image.height * scale))
-      canvas.getContext('2d')?.drawImage(image,0,0,canvas.width,canvas.height)
-      let quality = 0.84
+      const context = canvas.getContext('2d')
+      if (context) { context.fillStyle = '#fff'; context.fillRect(0,0,canvas.width,canvas.height); context.drawImage(image,0,0,canvas.width,canvas.height) }
+      // WebP is ~30% smaller than JPEG; browsers that can't encode it return PNG, so fall back to JPEG.
+      let format:'image/webp'|'image/jpeg' = 'image/webp'
+      let quality = 0.8
       const convert = () => canvas.toBlob((blob) => {
         if (!blob) { reject(new Error('บีบอัดรูปไม่สำเร็จ')); return }
-        if (blob.size <= maxBytes || quality <= 0.4) { resolve(new File([blob],`${file.name.replace(/\.[^.]+$/,'')}.jpg`,{type:'image/jpeg'})); return }
+        if (blob.type !== format) { format = 'image/jpeg'; convert(); return }
+        if (blob.size <= maxBytes || quality <= 0.4) { resolve(new File([blob],`${file.name.replace(/\.[^.]+$/,'')}.${format==='image/webp'?'webp':'jpg'}`,{type:format})); return }
         quality -= 0.08; convert()
-      },'image/jpeg',quality)
+      },format,quality)
       convert()
     }
     image.src = String(reader.result)
@@ -159,6 +164,11 @@ type ApiAuditItem = { name:string; status:'ok'|'slow'|'error'|'not-connected'; d
 type ImagePickerController = { preview:string; choose:(file:File|null)=>void; clear:()=>void }
 let imagePickerController:ImagePickerController|null = null
 
+function removeStorageImage(url:string|null|undefined) {
+  const object = url ? getStorageObject(url) : null
+  if (!object || !supabase) return Promise.resolve()
+  return withRequestTimeout(supabase.storage.from(object.bucket).remove([object.path]),'ลบไฟล์รูป').then(()=>undefined,()=>undefined)
+}
 function getStorageObject(url:string) {
   try {
     const imageUrl = new URL(url)
@@ -376,6 +386,8 @@ function App() {
     if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview)
     setImageFile(null); setImagePreview(''); setField('image_url','')
   }
+  // Daily records can reuse an earlier day's image, so only delete files no other record still points to.
+  const isImageUsedElsewhere = (url:string|null|undefined,ignoreIds:string[]) => Boolean(url) && communities.some((item)=>item.image_url===url && !ignoreIds.includes(item.id))
   async function getImageUrlForSave() {
     if (!imageFile) return imagePreview || form.image_url.trim() || null
     if (!hasSupabaseConfig) return fileToDataUrl(imageFile)
@@ -404,10 +416,11 @@ function App() {
     if (missing.length) { flash(missingFieldsMessage(missing)); return }
     setSaving(true)
     try {
-      let imageUrl:string|null
-      try { imageUrl = await getImageUrlForSave() } catch (error) { flash(error instanceof Error ? error.message : 'อัปโหลดรูปไม่สำเร็จ'); return }
       const memberCount = Number(form.member_count)
       if (!Number.isInteger(memberCount) || memberCount < 22) { flash('จำนวนที่รับต้องอย่างน้อย 22 คน และไม่จำกัดจำนวนสูงสุด'); return }
+      let imageUrl:string|null
+      try { imageUrl = await getImageUrlForSave() } catch (error) { flash(error instanceof Error ? error.message : 'อัปโหลดรูปไม่สำเร็จ'); return }
+      const uploadedImageUrl = imageFile && hasSupabaseConfig ? imageUrl : null
       const payload = {activity_date:today,community_name:form.community_name.trim(),advisor_name:current.teacher_name,school_name:form.school_name.trim(),location:form.location.trim(),member_count:memberCount,description:limitTemplateDetail(form.description.trim()),image_url:imageUrl}
       if (!hasSupabaseConfig) {
         const code = current.community_code
@@ -426,9 +439,11 @@ function App() {
       const existing = communities.find((x)=>x.owner_id===current.id && x.activity_date===today)
       const recordId = editingId ?? existing?.id
       let answer
+      const previousImageUrl = recordId ? communities.find((x)=>x.id===recordId)?.image_url : undefined
       try { answer = recordId ? await withRequestTimeout(supabase!.from('communities').update(payload).eq('id',recordId).select().single(),'บันทึกข้อมูล') : await withRequestTimeout(supabase!.from('communities').insert({...payload,community_code:current.community_code,owner_id:current.id}).select().single(),'บันทึกข้อมูล') }
-      catch (error) { flash(`บันทึกไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
-      if (answer.error) { flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
+      catch (error) { void removeStorageImage(uploadedImageUrl); flash(`บันทึกไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
+      if (answer.error) { void removeStorageImage(uploadedImageUrl); flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
+      if (previousImageUrl && previousImageUrl !== imageUrl && !isImageUsedElsewhere(previousImageUrl,[recordId!])) void removeStorageImage(previousImageUrl)
       const count = await recordSubmission(current.id,answer.data.id,today)
       clearFormAfterSaveRef.current = true
       await load(false); setSelectedId(answer.data.id); clearSubmittedCommunityForm(); flash(`บันทึกสำเร็จแล้ว · วันนี้ส่งข้อมูลแล้ว ${number(count)} ครั้ง`)
@@ -463,10 +478,12 @@ function App() {
       setCommunities(next); setSelectedId(item.id); localStorage.setItem('teacher-community-demo',JSON.stringify(next)); flash(existing?'แก้ไขข้อมูลชุมชนของคุณครูแล้ว':'บันทึกข้อมูลชุมชนแทนคุณครูแล้ว'); return
     }
     const existing = communities.find((item)=>item.owner_id===owner.id && item.activity_date===activityDate)
+    const uploadedImageUrl = adminImageFile ? imageUrl : null
     let answer
     try { answer = existing ? await withRequestTimeout(supabase!.from('communities').update(payload).eq('id',existing.id).select().single(),'บันทึกข้อมูล') : await withRequestTimeout(supabase!.from('communities').insert({...payload,community_code:owner.community_code,owner_id:owner.id}).select().single(),'บันทึกข้อมูล') }
-    catch (error) { flash(`บันทึกไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
-    if (answer.error) { flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
+    catch (error) { void removeStorageImage(uploadedImageUrl); flash(`บันทึกไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
+    if (answer.error) { void removeStorageImage(uploadedImageUrl); flash(`บันทึกไม่สำเร็จ: ${answer.error.message}`); return }
+    if (existing?.image_url && existing.image_url !== imageUrl && !isImageUsedElsewhere(existing.image_url,[existing.id])) void removeStorageImage(existing.image_url)
     await load(false); flash(existing?'บันทึกสำเร็จแล้ว · แก้ไขข้อมูลชุมชนของคุณครูแล้ว':'บันทึกสำเร็จแล้ว · บันทึกข้อมูลชุมชนแทนคุณครูแล้ว')
   }
   async function signInWithSupabase(username:string,adminOnly=false):Promise<boolean> {
@@ -570,7 +587,7 @@ function App() {
       const next = communities.map((item) => item.id === community.id ? {...item,image_url:undefined} : item)
       setCommunities(next); localStorage.setItem('teacher-community-demo',JSON.stringify(next)); flash('ลบรูปออกจากข้อมูลแล้ว'); return
     }
-    const object = getStorageObject(community.image_url)
+    const object = isImageUsedElsewhere(community.image_url,[community.id]) ? null : getStorageObject(community.image_url)
     let imageUpdate
     try { imageUpdate = await withRequestTimeout(supabase!.from('communities').update({image_url:null}).eq('id',community.id),'ลบลิงก์รูป') }
     catch (error) { flash(`ลบลิงก์รูปไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
@@ -589,7 +606,8 @@ function App() {
       const next = communities.filter((item)=>item.activity_date!==activityDate)
       setCommunities(next); setSelectedId(next[0]?.id ?? null); localStorage.setItem('teacher-community-demo',JSON.stringify(next)); flash(`ลบข้อมูลของวันที่ ${thaiDate(activityDate)} แล้ว`); return
     }
-    const storedImages = matches.map((item)=>getStorageObject(item.image_url ?? '')).filter((item):item is {bucket:string;path:string}=>Boolean(item))
+    const matchIds = matches.map((item)=>item.id)
+    const storedImages = Array.from(new Set(matches.map((item)=>item.image_url ?? '').filter((url)=>url && !isImageUsedElsewhere(url,matchIds)))).map(getStorageObject).filter((item):item is {bucket:string;path:string}=>Boolean(item))
     let answer
     try { answer = await withRequestTimeout(supabase!.from('communities').delete().eq('activity_date',activityDate),'ลบข้อมูลชุมชน') }
     catch (error) { flash(`ลบข้อมูลไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
@@ -603,7 +621,7 @@ function App() {
       const next = communities.filter((item)=>item.id!==community.id)
       setCommunities(next); setSelectedId((selectedId===community.id ? next[0]?.id : selectedId) ?? null); localStorage.setItem('teacher-community-demo',JSON.stringify(next)); flash(`ลบข้อมูลชุมชน “${community.community_name}” แล้ว`); return
     }
-    const storedImage = getStorageObject(community.image_url ?? '')
+    const storedImage = isImageUsedElsewhere(community.image_url,[community.id]) ? null : getStorageObject(community.image_url ?? '')
     let answer
     try { answer = await withRequestTimeout(supabase!.from('communities').delete().eq('id',community.id),'ลบข้อมูลชุมชน') }
     catch (error) { flash(`ลบข้อมูลไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
@@ -619,7 +637,8 @@ function App() {
       const next = communities.filter((item)=>!item.activity_date || item.activity_date >= cutoffDate)
       setCommunities(next); setSelectedId(next[0]?.id ?? null); localStorage.setItem('teacher-community-demo',JSON.stringify(next)); flash(`ลบข้อมูลเก่าก่อนวันที่ ${thaiDate(cutoffDate)} แล้ว`); return
     }
-    const storedImages = matches.map((item)=>getStorageObject(item.image_url ?? '')).filter((item):item is {bucket:string;path:string}=>Boolean(item))
+    const matchIds = matches.map((item)=>item.id)
+    const storedImages = Array.from(new Set(matches.map((item)=>item.image_url ?? '').filter((url)=>url && !isImageUsedElsewhere(url,matchIds)))).map(getStorageObject).filter((item):item is {bucket:string;path:string}=>Boolean(item))
     let answer
     try { answer = await withRequestTimeout(supabase!.from('communities').delete().lt('activity_date',cutoffDate),'ลบข้อมูลเก่า') }
     catch (error) { flash(`ลบข้อมูลเก่าไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
@@ -894,7 +913,7 @@ function AdminCommunityEntryPanel({accounts,communities,settings,onSave}:{accoun
         <label className="field"><span>โรงเรียน<i>*</i></span><input className="readonly-field" value={form.school_name || settings.school} readOnly required/></label>
         <label className="field"><span>สถานที่<i>*</i></span><input value={form.location} onChange={(event)=>setField('location',event.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2" required/></label>
         <label className="field"><span>จำนวนที่รับ (อย่างน้อย 22 คน)<i>*</i></span><input type="number" min="22" value={form.member_count} onChange={(event)=>setField('member_count',event.target.value)} placeholder="22" required/></label>
-        <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน<i>*</i></span><div className="image-picker"><input id="admin-community-image-file" type="file" accept="image/*" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><input id="admin-community-image-camera" type="file" accept="image/*" capture="environment" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="admin-community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="admin-community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{imagePreview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={imagePreview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={clearImage}><X size={14}/> ลบรูป</button></div>}<small>{imageNotice || 'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div></div>
+        <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน<i>*</i></span><div className="image-picker"><input id="admin-community-image-file" type="file" accept="image/*" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><input id="admin-community-image-camera" type="file" accept="image/*" capture="environment" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="admin-community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="admin-community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{imagePreview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={imagePreview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={clearImage}><X size={14}/> ลบรูป</button></div>}<small>{imageNotice || 'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 250 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div></div>
         <label className="field span-2"><span>รายละเอียดกิจกรรม (ไม่บังคับ · ไม่เกิน 120 ตัวอักษร)</span><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(event)=>setField('description',event.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><DescriptionHelp value={form.description}/></label>
       </fieldset>
       <div className="admin-entry-footer"><span>{record?'กำลังแก้ไขข้อมูลของคุณครูคนนี้':'กำลังกรอกข้อมูลแทนคุณครูคนนี้'}</span><button className="primary-button"><Check size={16}/> {record?'บันทึกการแก้ไข':'บันทึกข้อมูล'}</button></div>
@@ -1133,7 +1152,7 @@ function ImagePickerField(){
   const picker=imagePickerController
   const [showImage,setShowImage]=useState(false)
   if(!picker)return null
-  return <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน<i>*</i></span><div className="image-picker"><input id="community-image-file" type="file" accept="image/*" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><input id="community-image-camera" type="file" accept="image/*" capture="environment" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{picker.preview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={picker.preview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={picker.clear}><X size={14}/> ลบรูป</button></div>}<small>{picker.preview?'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น':'ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div>{showImage&&picker.preview&&<ImageLightbox src={picker.preview} onClose={()=>setShowImage(false)}/>}</div>
+  return <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน<i>*</i></span><div className="image-picker"><input id="community-image-file" type="file" accept="image/*" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><input id="community-image-camera" type="file" accept="image/*" capture="environment" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{picker.preview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={picker.preview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={picker.clear}><X size={14}/> ลบรูป</button></div>}<small>{picker.preview?'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 250 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น':'ระบบจะย่อรูปไม่เกิน 250 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div>{showImage&&picker.preview&&<ImageLightbox src={picker.preview} onClose={()=>setShowImage(false)}/>}</div>
 }
 function Field({label,required,className='',children}:{label:string;required?:boolean;className?:string;children:React.ReactNode}){return label==='ลิงก์รูปภาพ (ไม่บังคับ)'?<ImagePickerField/>:<label className={`field ${className}`}><span>{label}{required&&<i>*</i>}</span>{children}</label>}
 function Metric({value,label,icon}:{value:number|string;label:string;icon:React.ReactNode}){return <div className="metric"><span>{icon}</span><div><b>{typeof value==='number'?number(value):value}</b><small>{label}</small></div></div>}
