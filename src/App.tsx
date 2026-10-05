@@ -907,43 +907,52 @@ function TemplatePanel({communities,accounts,onDeleteDate,onDeleteCommunity}:{co
   const [templateVariant,setTemplateVariant] = useState<TemplateVariant>('classic')
   const teachers = useMemo(()=>accounts.filter((account)=>account.role==='teacher'),[accounts])
   const [selectedTeacherId,setSelectedTeacherId] = useState('all')
+  const [selectedIds,setSelectedIds] = useState<string[]>([])
   const [page,setPage] = useState(1)
   const pageSize = 20
   const daily = useMemo(()=>communities.filter((item)=>item.activity_date===selectedDate),[communities,selectedDate])
   const selectedTeacher = teachers.find((teacher)=>teacher.id===selectedTeacherId)
   const visibleDaily = useMemo(()=>selectedTeacherId==='all' ? daily : daily.filter((item)=>selectedTeacher && (item.owner_id===selectedTeacher.id || item.community_code===selectedTeacher.community_code)),[daily,selectedTeacher,selectedTeacherId])
-  const selectedCommunity = selectedTeacher ? visibleDaily[0] : undefined
-  const previewRef = useRef<HTMLDivElement>(null)
+  const selectedItems = useMemo(()=>visibleDaily.filter((item)=>selectedIds.includes(item.id)),[selectedIds,visibleDaily])
+  const exportRefs = useRef<Record<string,HTMLDivElement|null>>({})
   const pageCount = Math.max(1,Math.ceil(visibleDaily.length/pageSize))
   const currentPage = Math.min(page,pageCount)
   const pagedDaily = visibleDaily.slice((currentPage-1)*pageSize,currentPage*pageSize)
+  const allVisibleSelected = visibleDaily.length > 0 && visibleDaily.every((item)=>selectedIds.includes(item.id))
   const [previewCommunity,setPreviewCommunity] = useState<Community|null>(null)
   useEffect(()=>{
     if (selectedTeacherId !== 'all' && selectedTeacherId && !selectedTeacher) setSelectedTeacherId('all')
   },[selectedTeacherId,selectedTeacher,teachers])
+  useEffect(()=>{
+    setSelectedIds((current)=>current.filter((id)=>visibleDaily.some((item)=>item.id===id)))
+  },[visibleDaily])
   const teacherName = (item:Community) => accounts.find((account)=>account.id===item.owner_id)?.teacher_name ?? item.advisor_name
   const templateTeacher = (item:Community):TeacherAccount => accounts.find((account)=>account.id===item.owner_id) ?? accounts.find((account)=>account.community_code===item.community_code) ?? {id:`template-${item.id}`,teacher_name:item.advisor_name,community_code:item.community_code,role:'teacher'}
   async function exportTemplate() {
-    if (!selectedCommunity || !previewRef.current) return
-    const dataUrl = await htmlToImage.toPng(previewRef.current,{pixelRatio:2,cacheBust:true,backgroundColor:'#fff7eb'})
-    const link = document.createElement('a')
-    link.download = `template-${selectedCommunity.community_code}-${selectedDate}.png`
-    link.href = dataUrl
-    link.click()
+    for (const item of selectedItems) {
+      const node = exportRefs.current[item.id]
+      if (!node) continue
+      const dataUrl = await htmlToImage.toPng(node,{pixelRatio:2,cacheBust:true,backgroundColor:'#fff7eb'})
+      const link = document.createElement('a')
+      link.download = `template-${item.community_code}-${selectedDate}.png`
+      link.href = dataUrl
+      link.click()
+      await new Promise((resolve)=>setTimeout(resolve,180))
+    }
   }
   function exportDaily() {
-    const sheet = XLSX.utils.json_to_sheet(visibleDaily.map((item)=>({'วันที่':thaiDate(selectedDate),'ชื่อครู':teacherName(item),'รหัสชุมชน':item.community_code,'ชื่อชุมนุม':item.community_name,'โรงเรียน':item.school_name,'สถานที่':item.location,'จำนวนสมาชิก':item.member_count,'รายละเอียดกิจกรรม':item.description,'ลิงก์รูปภาพ':item.image_url ?? ''})))
+    const sheet = XLSX.utils.json_to_sheet(selectedItems.map((item)=>({'วันที่':thaiDate(selectedDate),'ชื่อครู':teacherName(item),'รหัสชุมชน':item.community_code,'ชื่อชุมนุม':item.community_name,'โรงเรียน':item.school_name,'สถานที่':item.location,'จำนวนสมาชิก':item.member_count,'รายละเอียดกิจกรรม':item.description,'ลิงก์รูปภาพ':item.image_url ?? ''})))
     sheet['!cols'] = [18,26,14,30,26,20,14,60,42].map((wch)=>({wch}))
     const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,'ข้อมูลรายวัน')
     XLSX.writeFile(book,`teacher-community-${selectedDate}-${selectedTeacherId==='all'?'all':selectedTeacher?.community_code ?? 'teacher'}.xlsx`)
   }
   return <section className="admin-panel template-panel">
     <div className="section-title"><FileSpreadsheet size={20}/><div><h3>Template ภาพชุมนุม</h3><p>เลือกวันที่และชื่อคุณครู เพื่อสร้างภาพรูปแบบเดียวกันสำหรับใช้งานหรือดาวน์โหลด</p></div></div>
-    <div className="template-toolbar template-toolbar-template"><label>วันที่บันทึก<input type="date" value={selectedDate} onChange={(event)=>{setSelectedDate(event.target.value);setPage(1)}}/></label><label className="template-teacher-filter">คุณครู<TeacherCombobox teachers={teachers} value={selectedTeacherId} showAll onChange={(next)=>{setSelectedTeacherId(next);setPage(1)}}/></label><label className="template-variant-picker">รูปแบบ Template<select value={templateVariant} onChange={(event)=>setTemplateVariant(event.target.value as TemplateVariant)}>{Object.entries(templateVariants).map(([value,variant])=><option key={value} value={value}>{variant.label}</option>)}</select></label><div className="template-toolbar-actions"><button className="primary-button" disabled={!selectedCommunity} onClick={()=>void exportTemplate()}><Download size={16}/> ดาวน์โหลด PNG</button><button className="secondary-button" disabled={!visibleDaily.length} onClick={exportDaily}><FileSpreadsheet size={16}/> Export Xlsx</button><button className="danger-button" disabled={!daily.length} onClick={()=>void onDeleteDate(selectedDate)}><Trash2 size={16}/> ลบข้อมูลวันนี้</button></div></div>
-    {selectedCommunity && selectedTeacher ? <div className="template-preview-wrap"><TeacherTemplateCard community={selectedCommunity} teacher={selectedTeacher} variant={templateVariant} ref={previewRef}/></div> : <div className="template-empty template-empty-preview"><FileSpreadsheet size={22}/><b>{selectedTeacherId==='all'&&visibleDaily.length?'เลือกชื่อคุณครูเพื่อสร้าง Template PNG':'ยังไม่มีข้อมูลสำหรับสร้าง Template'}</b><span>{selectedTeacherId==='all'&&visibleDaily.length?'ขณะนี้กำลังแสดงข้อมูลคุณครูทั้งหมดด้านล่าง':'เลือกวันที่และคุณครูที่มีการบันทึกข้อมูลแล้ว'}</span></div>}
+    <div className="template-toolbar template-toolbar-template"><label>วันที่บันทึก<input type="date" value={selectedDate} onChange={(event)=>{setSelectedDate(event.target.value);setSelectedIds([]);setPage(1)}}/></label><label className="template-teacher-filter">คุณครู<TeacherCombobox teachers={teachers} value={selectedTeacherId} showAll onChange={(next)=>{setSelectedTeacherId(next);setSelectedIds([]);setPage(1)}}/></label><label className="template-variant-picker">รูปแบบ Template<select value={templateVariant} onChange={(event)=>setTemplateVariant(event.target.value as TemplateVariant)}>{Object.entries(templateVariants).map(([value,variant])=><option key={value} value={value}>{variant.label}</option>)}</select></label><div className="template-toolbar-actions"><span className="template-selection-summary">เลือกแล้ว {number(selectedItems.length)} รายการ</span><button className="primary-button" disabled={!selectedItems.length} onClick={()=>void exportTemplate()}><Download size={16}/> ดาวน์โหลด PNG</button><button className="secondary-button" disabled={!selectedItems.length} onClick={exportDaily}><FileSpreadsheet size={16}/> Export Xlsx</button><button className="danger-button" disabled={!daily.length} onClick={()=>void onDeleteDate(selectedDate)}><Trash2 size={16}/> ลบข้อมูลวันนี้</button></div></div>
+    <div className="template-export-staging" aria-hidden="true">{selectedItems.map((item)=><TeacherTemplateCard key={item.id} community={item} teacher={templateTeacher(item)} variant={templateVariant} ref={(node)=>{exportRefs.current[item.id]=node}}/>)}</div>
     {visibleDaily.length ? <>
-      <div className="template-day-summary"><b>รูป Template ของวันที่เลือก</b><span>{number(visibleDaily.length)} รายการ · {selectedTeacherId==='all'?'แสดงข้อมูลคุณครูทั้งหมด':'แสดงข้อมูลของคุณครูที่เลือก'}</span></div>
-      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th><th className="template-description-column">รายละเอียดกิจกรรม</th><th className="template-actions-column">จัดการ</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} variant={templateVariant} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td><td className="template-description-cell">{item.description||'-'}</td><td className="template-actions-cell"><button type="button" className="template-delete-button" onClick={()=>void onDeleteCommunity(item)} title="ลบข้อมูลแถวนี้"><Trash2 size={15}/> ลบ</button></td></tr>)}</tbody></table></div>
+      <div className="template-day-summary"><b>ตารางข้อมูล Template ของวันที่เลือก</b><span>{number(visibleDaily.length)} รายการ · {selectedTeacherId==='all'?'แสดงข้อมูลคุณครูทั้งหมด':'แสดงข้อมูลของคุณครูที่เลือก'}</span></div>
+      <div className="template-table-wrap"><table className="template-table"><thead><tr><th className="template-select-column"><input type="checkbox" checked={allVisibleSelected} onChange={()=>setSelectedIds(allVisibleSelected?[]:visibleDaily.map((item)=>item.id))} aria-label="เลือกข้อมูลทั้งหมด"/></th><th className="template-image-column">รูป Template</th><th>ครูผู้บันทึก</th><th>รหัสชุมชน</th><th>ชื่อชุมนุม</th><th>โรงเรียน</th><th>จำนวนที่รับ</th><th>สถานที่</th><th className="template-description-column">รายละเอียดกิจกรรม</th><th className="template-actions-column">จัดการ</th></tr></thead><tbody>{pagedDaily.map((item)=><tr key={item.id}><td className="template-select-column"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={()=>setSelectedIds((current)=>current.includes(item.id)?current.filter((id)=>id!==item.id):[...current,item.id])} aria-label={`เลือก ${item.community_name}`}/></td><td className="template-image-column"><button type="button" className="template-card-mini-button" onClick={()=>setPreviewCommunity(item)} title="กดเพื่อดูรูป Template ขนาดใหญ่"><div className="template-card-mini"><TeacherTemplateCard community={item} teacher={templateTeacher(item)} variant={templateVariant} ref={undefined}/></div></button></td><td>{teacherName(item)}</td><td>{item.community_code}</td><td>{item.community_name}</td><td>{item.school_name}</td><td>{number(item.member_count)}</td><td>{item.location||'-'}</td><td className="template-description-cell">{item.description||'-'}</td><td className="template-actions-cell"><button type="button" className="template-delete-button" onClick={()=>void onDeleteCommunity(item)} title="ลบข้อมูลแถวนี้"><Trash2 size={15}/> ลบ</button></td></tr>)}</tbody></table></div>
       {pageCount>1&&<TemplatePagination page={currentPage} pageCount={pageCount} onPageChange={setPage}/>} 
     </> : <div className="template-empty"><FileSpreadsheet size={22}/><b>ยังไม่มีข้อมูลในวันที่เลือก</b><span>ลองเลือกวันอื่น หรือรอคุณครูบันทึกข้อมูลชุมชน</span></div>}
     {previewCommunity&&<TemplateLightbox community={previewCommunity} teacher={templateTeacher(previewCommunity)} variant={templateVariant} onClose={()=>setPreviewCommunity(null)}/>}
