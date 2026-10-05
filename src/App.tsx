@@ -17,27 +17,67 @@ type CommunityForm = typeof emptyForm
 type AdminCommunitySave = (owner:TeacherAccount,form:CommunityForm,imageFile:File|null,imagePreview:string)=>Promise<void>
 const TEMPLATE_DETAIL_MAX_LENGTH = 120
 const limitTemplateDetail = (value:string) => Array.from(value).slice(0,TEMPLATE_DETAIL_MAX_LENGTH).join('')
+// Longer details still fit, but the text shrinks noticeably in the smaller template boxes.
+const TEMPLATE_DETAIL_RECOMMENDED_LENGTH = 100
+// Every field except the activity description is required, including the teacher photo shown on the template.
+function missingCommunityFields(form:CommunityForm,hasImage:boolean) {
+  const required:[string,string][] = [['ชื่อชุมนุม',form.community_name],['ครูที่ปรึกษา',form.advisor_name],['โรงเรียน',form.school_name],['สถานที่',form.location],['จำนวนที่รับ',form.member_count]]
+  const missing = required.filter(([,value])=>!value.trim()).map(([label])=>label)
+  if (!hasImage) missing.push('รูปภาพคุณครู')
+  return missing
+}
+const missingFieldsMessage = (missing:string[]) => `กรุณากรอกให้ครบ: ${missing.join(', ')}`
 type TemplateVariant = 'html'|'classic'|'colorful'|'modern'
 type TemplateFieldKey = 'code'|'name'|'advisor'|'location'|'members'|'description'
-type TemplateVariantConfig = { label:string; background:string; photo:React.CSSProperties; fields:Partial<Record<TemplateFieldKey,React.CSSProperties>> }
+// Image templates are laid out on the background's native 1254px grid, then scaled to fit their container.
+const POSTER_SIZE = 1254
+type PosterBox = { left:number; top:number; width:number; height:number }
+type PosterField = { box:PosterBox; max:number; min:number; className?:string }
+type TemplateVariantConfig = { label:string; background?:string; photo:PosterBox; fields:Record<TemplateFieldKey,PosterField> }
+const posterDescription = 'poster-field-description'
+const posterShort = 'poster-field-short'
+// Cards drawn by the HTML template; each value sits inside its card, below the label chip.
+const htmlPosterCards:Record<TemplateFieldKey,{label:string;tone:string;card:PosterBox}> = {
+  code:{label:'รหัสชุมนุม',tone:'yellow',card:{left:572,top:300,width:622,height:104}},
+  name:{label:'ชื่อชุมนุม',tone:'pink',card:{left:572,top:420,width:622,height:136}},
+  advisor:{label:'ครูที่ปรึกษา',tone:'blue',card:{left:572,top:572,width:622,height:112}},
+  location:{label:'สถานที่',tone:'green',card:{left:572,top:700,width:622,height:112}},
+  members:{label:'จำนวนที่รับ',tone:'purple',card:{left:572,top:828,width:622,height:104}},
+  description:{label:'รายละเอียด',tone:'orange',card:{left:572,top:948,width:622,height:196}},
+}
+const htmlPosterValue = ({left,top,width,height}:PosterBox):PosterBox => ({left:left+24,top:top+28,width:width-48,height:height-36})
 const templateVariants:Record<TemplateVariant,TemplateVariantConfig> = {
-  html:{label:'แบบ HTML · ข้อความพอดี',background:'',photo:{},fields:{}},
-  classic:{label:'แบบเดิม · สดใส',background:'/club-template-original.png',photo:{},fields:{}},
-  colorful:{label:'แบบสีพาสเทล · ดอกไม้',background:'/template-colorful.png',photo:{left:'5.2%',top:'27.1%',width:'39.1%',height:'51.7%'},fields:{
-    code:{left:'46.1%',top:'27.2%',width:'47.5%',height:'7.2%',fontSize:'31px',whiteSpace:'nowrap'},
-    name:{left:'46.1%',top:'39.0%',width:'47.5%',height:'7.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
-    advisor:{left:'46.1%',top:'50.6%',width:'47.5%',height:'7.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
-    location:{left:'46.1%',top:'60.9%',width:'47.5%',height:'5.8%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
-    members:{left:'46.1%',top:'71.2%',width:'47.5%',height:'5.5%',fontSize:'32px',whiteSpace:'nowrap'},
-    description:{left:'47.0%',top:'81.9%',width:'45.5%',height:'10.5%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 1.8%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
+  html:{label:'การ์ดพาสเทล',photo:{left:60,top:300,width:470,height:640},fields:{
+    code:{box:htmlPosterValue(htmlPosterCards.code.card),max:44,min:22,className:posterShort},
+    name:{box:htmlPosterValue(htmlPosterCards.name.card),max:40,min:18},
+    advisor:{box:htmlPosterValue(htmlPosterCards.advisor.card),max:38,min:18},
+    location:{box:htmlPosterValue(htmlPosterCards.location.card),max:34,min:15},
+    members:{box:htmlPosterValue(htmlPosterCards.members.card),max:42,min:20,className:posterShort},
+    description:{box:htmlPosterValue(htmlPosterCards.description.card),max:28,min:13,className:posterDescription},
   }},
-  modern:{label:'แบบมินิมอล · น้ำเงินส้ม',background:'/template-modern.png',photo:{left:'3.2%',top:'24.8%',width:'36.6%',height:'48.5%'},fields:{
-    code:{left:'42.1%',top:'24.8%',width:'53.5%',height:'7.7%',fontSize:'31px',whiteSpace:'nowrap'},
-    name:{left:'42.1%',top:'38.0%',width:'53.5%',height:'6.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'30px'},
-    advisor:{left:'42.1%',top:'49.0%',width:'53.5%',height:'6.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'29px'},
-    location:{left:'42.1%',top:'60.1%',width:'53.5%',height:'5.0%',padding:'0 2%',boxSizing:'border-box',fontSize:'28px',whiteSpace:'nowrap'},
-    members:{left:'42.1%',top:'70.0%',width:'53.5%',height:'5.5%',fontSize:'32px',whiteSpace:'nowrap'},
-    description:{left:'42.1%',top:'79.5%',width:'53.5%',height:'11.5%',alignItems:'flex-start',justifyContent:'flex-start',padding:'1.5% 2%',boxSizing:'border-box',textAlign:'left',fontSize:'23px',lineHeight:'1.35',whiteSpace:'pre-wrap'},
+  classic:{label:'ห้องเรียนน่ารัก',background:'/club-template-original.png',photo:{left:74,top:584,width:452,height:400},fields:{
+    code:{box:{left:780,top:192,width:350,height:76},max:44,min:20,className:posterShort},
+    name:{box:{left:650,top:362,width:540,height:88},max:40,min:18},
+    advisor:{box:{left:650,top:545,width:540,height:95},max:38,min:18},
+    location:{box:{left:665,top:740,width:525,height:58},max:32,min:15},
+    members:{box:{left:665,top:882,width:525,height:60},max:40,min:18,className:posterShort},
+    description:{box:{left:630,top:1040,width:560,height:80},max:24,min:12,className:posterDescription},
+  }},
+  colorful:{label:'ดอกไม้ท้องฟ้าใส',background:'/template-colorful.png',photo:{left:72,top:340,width:476,height:642},fields:{
+    code:{box:{left:812,top:356,width:352,height:74},max:54,min:22,className:posterShort},
+    name:{box:{left:604,top:500,width:580,height:76},max:40,min:18},
+    advisor:{box:{left:604,top:650,width:556,height:64},max:44,min:18},
+    location:{box:{left:604,top:792,width:566,height:50},max:32,min:15},
+    members:{box:{left:822,top:878,width:332,height:68},max:50,min:20,className:posterShort},
+    description:{box:{left:606,top:1032,width:576,height:96},max:26,min:13,className:posterDescription},
+  }},
+  modern:{label:'มินิมอล ฟ้า-ส้ม',background:'/template-modern.png',photo:{left:44,top:318,width:450,height:602},fields:{
+    code:{box:{left:740,top:318,width:460,height:82},max:46,min:22,className:posterShort},
+    name:{box:{left:735,top:438,width:465,height:94},max:40,min:18},
+    advisor:{box:{left:745,top:572,width:455,height:102},max:38,min:18},
+    location:{box:{left:720,top:710,width:480,height:82},max:34,min:15},
+    members:{box:{left:755,top:828,width:445,height:84},max:42,min:20,className:posterShort},
+    description:{box:{left:545,top:992,width:655,height:138},max:28,min:13,className:posterDescription},
   }},
 }
 const emptyAccount = { teacher_name:'', community_code:'' }
@@ -360,7 +400,8 @@ function App() {
   async function saveCommunity(event:React.FormEvent) {
     event.preventDefault()
     if (!current) { setShowLogin(true); flash('กรุณาเข้าสู่ระบบก่อนบันทึก'); return }
-    if (!form.community_name || !form.advisor_name || !form.school_name) { flash('กรุณากรอกชื่อชุมชน ครูที่ปรึกษา และโรงเรียน'); return }
+    const missing = missingCommunityFields(form,Boolean(imageFile || imagePreview || form.image_url.trim()))
+    if (missing.length) { flash(missingFieldsMessage(missing)); return }
     setSaving(true)
     try {
       let imageUrl:string|null
@@ -396,7 +437,8 @@ function App() {
     }
   }
   async function saveCommunityForAdmin(owner:TeacherAccount,adminForm:CommunityForm,adminImageFile:File|null,adminImagePreview:string) {
-    if (!adminForm.community_name || !adminForm.advisor_name || !adminForm.school_name) { flash('กรุณากรอกชื่อชุมชน ครูที่ปรึกษา และโรงเรียน'); return }
+    const missing = missingCommunityFields(adminForm,Boolean(adminImageFile || adminImagePreview || adminForm.image_url.trim()))
+    if (missing.length) { flash(missingFieldsMessage(missing)); return }
     const memberCount = Number(adminForm.member_count)
     if (!Number.isInteger(memberCount) || memberCount < 22) { flash('จำนวนที่รับต้องอย่างน้อย 22 คน และไม่จำกัดจำนวนสูงสุด'); return }
     let imageUrl:string|null = adminImagePreview || adminForm.image_url.trim() || null
@@ -664,7 +706,7 @@ function App() {
   return <main className="app-shell">
     <header className="topbar safety-topbar"><button className="brand" onClick={()=>setView('teacher')}><span className="school-crest"><img src="/school-crest.png" alt="ตราโรงเรียน"/></span><span>{settings.title}<small>{settings.term} · {settings.year}</small></span></button><nav className="top-actions">{current&&current.role!=='admin'&&<span className="current-teacher-menu">{current.teacher_name}</span>}{!isAdmin&&<button className={view==='teacher'?'nav-button active':'nav-button'} onClick={()=>setView('teacher')}><Pencil size={16}/> ข้อมูลชุมชน</button>}{isAdmin&&<AdminNavigation tab={adminTab} onChange={(next)=>{setAdminTab(next);window.sessionStorage.setItem(adminTabStorageKey,next)}}/>}{current?<button className="login-button logout-icon-button" aria-label="ออกจากระบบ" onClick={signOut}><LogOut size={16}/></button>:<button className="login-button" onClick={()=>setShowLogin(true)}><LogIn size={16}/> ค้นหาชื่อครู</button>}</nav></header>
     {notice&&<div className="notice"><Check size={17}/>{notice}<button onClick={()=>setNotice('')}><X size={16}/></button></div>}
-    {view==='teacher'?<section className="teacher-page safety-hero"><div className="teacher-intro"><div className="eyebrow"><Sparkles size={15}/> {settings.school}</div><h1>{current?<>สวัสดี<br/><em>{current.teacher_name}</em></>:<>{settings.title}<br/><em>{settings.term}</em></>}</h1><p>{current?`รหัสชุมชนของคุณคือ ${current.community_code} คุณสามารถบันทึกหรือแก้ไขข้อมูลชุมชนของตนเองได้`:'พิมพ์ชื่อของคุณเพื่อค้นหารายชื่อ แล้วกดเลือกเพื่อเข้าใช้งานได้ทันที'}</p>{current&&<div className="submission-status" role="status"><Check size={17}/><div><b>วันนี้ส่งข้อมูลแล้ว {number(todaySubmissionCount)} ครั้ง</b><span>กดบันทึกซ้ำได้ ระบบจะเก็บทุกครั้งและอัปเดตข้อมูลของวันนี้</span></div></div>}{current&&communities.find((x)=>x.owner_id===current.id&&x.activity_date===today)&&<button className="secondary-action" onClick={()=>openEditor(communities.find((x)=>x.owner_id===current.id&&x.activity_date===today))}><Pencil size={15}/> แก้ไขข้อมูลของวันนี้</button>}</div><form className="community-form" onSubmit={saveCommunity}><div className="form-heading"><div className="form-icon"><BookOpen size={21}/></div><div><h2>{editingId?'แก้ไขข้อมูลชุมนุม':'ข้อมูลชุมนุมของคุณ'}</h2><p>{current?`ข้อมูลประจำวันที่ ${thaiDate(today)} · แก้ไขได้ตลอดวันนี้`:'ค้นหาชื่อครูของคุณก่อนจึงจะบันทึกข้อมูลได้'}</p></div></div><fieldset disabled={!current} className="form-grid"><Field label="วันที่"><input className="readonly-field" type="date" value={form.activity_date} readOnly/></Field><Field label="รหัสชุมชน"><input className="readonly-field" value={form.community_code} readOnly/></Field><Field label="ชื่อชุมนุม" required><input value={form.community_name} onChange={(e)=>setField('community_name',e.target.value)} placeholder="เช่น ร้านค้าสวัสดิการโรงเรียน"/></Field><Field label="ครูที่ปรึกษา" required><input value={form.advisor_name} onChange={(e)=>setField('advisor_name',e.target.value)} placeholder="ชื่อ-นามสกุล"/></Field><Field label="โรงเรียน" required><input value={form.school_name} onChange={(e)=>setField('school_name',e.target.value)} placeholder={settings.school}/></Field><Field label="สถานที่"><input value={form.location} onChange={(e)=>setField('location',e.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2"/></Field><Field label="จำนวนที่รับ (อย่างน้อย 22 คน)" required><input type="number" min="22" value={form.member_count} onChange={(e)=>setField('member_count',e.target.value)} placeholder="22" required/></Field><Field label="ลิงก์รูปภาพ (ไม่บังคับ)"><input value={form.image_url} onChange={(e)=>setField('image_url',e.target.value)} placeholder="https://..."/></Field><Field label="รายละเอียดกิจกรรม (ไม่เกิน 120 ตัวอักษร)" className="span-2"><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(e)=>setField('description',e.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><small className="field-help">{form.description.length}/{TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร · ระบบจะจัดข้อความให้อยู่ในกรอบ Template</small></Field></fieldset><div className="form-footer"><span><LockKeyhole size={15}/>{current?'ข้อมูลประจำวันที่เลือกไว้แก้ไขได้เฉพาะรายชื่อของคุณ':'ข้อมูลจะถูกปลดล็อกเมื่อเลือกรายชื่อแล้ว'}</span><div>{current?<><button type="button" className="text-button" onClick={()=>{setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school});setEditingId(null)}}>ล้างข้อมูล</button><button className="primary-button" disabled={saving}>{saving?<><LoaderCircle size={17} className="spin"/>กำลังบันทึกข้อมูล...</>:<><ArrowRight size={17}/>{editingId?'บันทึกการแก้ไข':'บันทึกข้อมูลวันนี้'}</>}</button></>:<button type="button" className="primary-button" onClick={()=>setShowLogin(true)}><Search size={17}/> ค้นหาชื่อครู</button>}</div></div></form></section>:<AdminPage accounts={accounts} communities={communities} filtered={filtered} selected={selected} search={search} setSearch={setSearch} loading={loading} accountForm={accountForm} setAccountForm={setAccountForm} editingAccount={editingAccount} onSaveAccount={saveAccount} onEditAccount={editAccount} onDeleteAccount={deleteAccount} onCancelAccount={()=>{setEditingAccount(null);setAccountForm(emptyAccount)}} onImportAccounts={importAccounts} importingAccounts={importingAccounts} onExportExcel={exportExcel} onExportCard={exportCard} onSelected={setSelectedId} cardRef={cardRef} settings={settings} onSaveSettings={updateSettings} onSaveAdminAuth={updateAdminAuth} storageItems={storageItems} storageStats={storageStats} onDeleteImage={deleteCommunityImage} onAdminSaveCommunity={saveCommunityForAdmin} onDeleteDate={deleteCommunitiesByDate} onDeleteBeforeDate={deleteCommunitiesBeforeDate} onDeleteCommunity={deleteCommunity} onLoadDatabaseUsage={loadDatabaseUsage} onRunApiAudit={runApiAudit} adminTab={adminTab}/>}<CreditFooter />
+    {view==='teacher'?<section className="teacher-page safety-hero"><div className="teacher-intro"><div className="eyebrow"><Sparkles size={15}/> {settings.school}</div><h1>{current?<>สวัสดี<br/><em>{current.teacher_name}</em></>:<>{settings.title}<br/><em>{settings.term}</em></>}</h1><p>{current?`รหัสชุมชนของคุณคือ ${current.community_code} คุณสามารถบันทึกหรือแก้ไขข้อมูลชุมชนของตนเองได้`:'พิมพ์ชื่อของคุณเพื่อค้นหารายชื่อ แล้วกดเลือกเพื่อเข้าใช้งานได้ทันที'}</p>{current&&<div className="submission-status" role="status"><Check size={17}/><div><b>วันนี้ส่งข้อมูลแล้ว {number(todaySubmissionCount)} ครั้ง</b><span>กดบันทึกซ้ำได้ ระบบจะเก็บทุกครั้งและอัปเดตข้อมูลของวันนี้</span></div></div>}{current&&communities.find((x)=>x.owner_id===current.id&&x.activity_date===today)&&<button className="secondary-action" onClick={()=>openEditor(communities.find((x)=>x.owner_id===current.id&&x.activity_date===today))}><Pencil size={15}/> แก้ไขข้อมูลของวันนี้</button>}</div><form className="community-form" onSubmit={saveCommunity}><div className="form-heading"><div className="form-icon"><BookOpen size={21}/></div><div><h2>{editingId?'แก้ไขข้อมูลชุมนุม':'ข้อมูลชุมนุมของคุณ'}</h2><p>{current?`ข้อมูลประจำวันที่ ${thaiDate(today)} · แก้ไขได้ตลอดวันนี้`:'ค้นหาชื่อครูของคุณก่อนจึงจะบันทึกข้อมูลได้'}</p></div></div><fieldset disabled={!current} className="form-grid"><Field label="วันที่"><input className="readonly-field" type="date" value={form.activity_date} readOnly/></Field><Field label="รหัสชุมชน"><input className="readonly-field" value={form.community_code} readOnly/></Field><Field label="ชื่อชุมนุม" required><input value={form.community_name} onChange={(e)=>setField('community_name',e.target.value)} placeholder="เช่น ร้านค้าสวัสดิการโรงเรียน"/></Field><Field label="ครูที่ปรึกษา" required><input value={form.advisor_name} onChange={(e)=>setField('advisor_name',e.target.value)} placeholder="ชื่อ-นามสกุล"/></Field><Field label="โรงเรียน" required><input value={form.school_name} onChange={(e)=>setField('school_name',e.target.value)} placeholder={settings.school}/></Field><Field label="สถานที่" required><input value={form.location} onChange={(e)=>setField('location',e.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2" required/></Field><Field label="จำนวนที่รับ (อย่างน้อย 22 คน)" required><input type="number" min="22" value={form.member_count} onChange={(e)=>setField('member_count',e.target.value)} placeholder="22" required/></Field><Field label="ลิงก์รูปภาพ (ไม่บังคับ)"><input value={form.image_url} onChange={(e)=>setField('image_url',e.target.value)} placeholder="https://..."/></Field><Field label="รายละเอียดกิจกรรม (ไม่บังคับ · ไม่เกิน 120 ตัวอักษร)" className="span-2"><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(e)=>setField('description',e.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><DescriptionHelp value={form.description}/></Field></fieldset><div className="form-footer"><span><LockKeyhole size={15}/>{current?'ข้อมูลประจำวันที่เลือกไว้แก้ไขได้เฉพาะรายชื่อของคุณ':'ข้อมูลจะถูกปลดล็อกเมื่อเลือกรายชื่อแล้ว'}</span><div>{current?<><button type="button" className="text-button" onClick={()=>{setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school});setEditingId(null)}}>ล้างข้อมูล</button><button className="primary-button" disabled={saving}>{saving?<><LoaderCircle size={17} className="spin"/>กำลังบันทึกข้อมูล...</>:<><ArrowRight size={17}/>{editingId?'บันทึกการแก้ไข':'บันทึกข้อมูลวันนี้'}</>}</button></>:<button type="button" className="primary-button" onClick={()=>setShowLogin(true)}><Search size={17}/> ค้นหาชื่อครู</button>}</div></div></form></section>:<AdminPage accounts={accounts} communities={communities} filtered={filtered} selected={selected} search={search} setSearch={setSearch} loading={loading} accountForm={accountForm} setAccountForm={setAccountForm} editingAccount={editingAccount} onSaveAccount={saveAccount} onEditAccount={editAccount} onDeleteAccount={deleteAccount} onCancelAccount={()=>{setEditingAccount(null);setAccountForm(emptyAccount)}} onImportAccounts={importAccounts} importingAccounts={importingAccounts} onExportExcel={exportExcel} onExportCard={exportCard} onSelected={setSelectedId} cardRef={cardRef} settings={settings} onSaveSettings={updateSettings} onSaveAdminAuth={updateAdminAuth} storageItems={storageItems} storageStats={storageStats} onDeleteImage={deleteCommunityImage} onAdminSaveCommunity={saveCommunityForAdmin} onDeleteDate={deleteCommunitiesByDate} onDeleteBeforeDate={deleteCommunitiesBeforeDate} onDeleteCommunity={deleteCommunity} onLoadDatabaseUsage={loadDatabaseUsage} onRunApiAudit={runApiAudit} adminTab={adminTab}/>}<CreditFooter />
     {showLogin&&<div className="modal-backdrop initial-login-backdrop" onMouseDown={()=>current&&setShowLogin(false)}><section className="login-modal teacher-picker initial-login" onMouseDown={(e)=>e.stopPropagation()}><div className="login-symbol"><Search size={25}/></div><span className="login-kicker">ยินดีต้อนรับ</span><h2>เข้าสู่ระบบ</h2><p>ค้นหาชื่อของคุณ แล้วเลือกชื่อเพื่อเข้าไปกรอกข้อมูลชุมชน</p><label>ชื่อครู<input autoFocus value={teacherSearch} onChange={(e)=>setTeacherSearch(e.target.value)} placeholder="พิมพ์ชื่อครูเพื่อค้นหา..."/></label><div className="teacher-results">{teacherSearch.trim()?teacherMatches.map((teacher)=><button key={teacher.id} onClick={()=>selectTeacher(teacher)}><span>{teacher.teacher_name.slice(0,1)}</span><div><b>{teacher.teacher_name}</b><small><KeyRound size={12}/> รหัสชุมชน {teacher.community_code}</small></div><ArrowRight size={17}/></button>):<div className="search-empty">เริ่มพิมพ์ชื่อ เพื่อค้นหาจาก {number(accounts.filter((item)=>item.role==='teacher').length)} รายชื่อครู</div>}{teacherSearch.trim()&&teacherMatches.length===0&&<div className="search-empty">ไม่พบรายชื่อ ลองพิมพ์คำอื่น หรือแจ้งผู้ดูแลระบบ</div>}</div><button className="admin-entry-button" onClick={()=>{setShowLogin(false);setShowAdminLogin(true)}}><LockKeyhole size={15}/> เข้าสู่ระบบผู้ดูแล</button></section></div>}
     {showAdminLogin&&<div className="modal-backdrop" onMouseDown={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><section className="login-modal admin-login" onMouseDown={(e)=>e.stopPropagation()}><button className="modal-close" onClick={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><X size={19}/></button><div className="login-symbol"><LockKeyhole size={25}/></div><h2>เข้าสู่ระบบผู้ดูแล</h2><p>พิมพ์ Username `admin` เพื่อเข้าใช้งานโดยไม่ต้องใช้ Password</p><form onSubmit={adminSignIn}><label>Username<input autoFocus value={adminUsername} onChange={(e)=>setAdminUsername(e.target.value)} placeholder="admin" autoComplete="username" required/></label><button className="primary-button full"><LockKeyhole size={17}/> เข้าสู่ระบบผู้ดูแล</button></form></section></div>}
   </main>
@@ -850,10 +892,10 @@ function AdminCommunityEntryPanel({accounts,communities,settings,onSave}:{accoun
         <label className="field"><span>ชื่อชุมนุม<i>*</i></span><input value={form.community_name} onChange={(event)=>setField('community_name',event.target.value)} placeholder="เช่น ร้านค้าสวัสดิการโรงเรียน" required/></label>
         <label className="field"><span>ครูที่ปรึกษา<i>*</i></span><input className="readonly-field" value={form.advisor_name || teacher?.teacher_name || ''} readOnly required/></label>
         <label className="field"><span>โรงเรียน<i>*</i></span><input className="readonly-field" value={form.school_name || settings.school} readOnly required/></label>
-        <label className="field"><span>สถานที่</span><input value={form.location} onChange={(event)=>setField('location',event.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2"/></label>
-        <label className="field"><span>จำนวนที่รับ (อย่างน้อย 22 คน)</span><input type="number" min="22" value={form.member_count} onChange={(event)=>setField('member_count',event.target.value)} placeholder="22" required/></label>
-        <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน</span><div className="image-picker"><input id="admin-community-image-file" type="file" accept="image/*" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><input id="admin-community-image-camera" type="file" accept="image/*" capture="environment" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="admin-community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="admin-community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{imagePreview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={imagePreview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={clearImage}><X size={14}/> ลบรูป</button></div>}<small>{imageNotice || 'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div></div>
-        <label className="field span-2"><span>รายละเอียดกิจกรรม (ไม่เกิน 120 ตัวอักษร)</span><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(event)=>setField('description',event.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><small className="field-help">{form.description.length}/{TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร · ระบบจะจัดข้อความให้อยู่ในกรอบ Template</small></label>
+        <label className="field"><span>สถานที่<i>*</i></span><input value={form.location} onChange={(event)=>setField('location',event.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2" required/></label>
+        <label className="field"><span>จำนวนที่รับ (อย่างน้อย 22 คน)<i>*</i></span><input type="number" min="22" value={form.member_count} onChange={(event)=>setField('member_count',event.target.value)} placeholder="22" required/></label>
+        <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน<i>*</i></span><div className="image-picker"><input id="admin-community-image-file" type="file" accept="image/*" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><input id="admin-community-image-camera" type="file" accept="image/*" capture="environment" onChange={(event)=>void chooseImage(event.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="admin-community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="admin-community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{imagePreview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={imagePreview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={clearImage}><X size={14}/> ลบรูป</button></div>}<small>{imageNotice || 'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div></div>
+        <label className="field span-2"><span>รายละเอียดกิจกรรม (ไม่บังคับ · ไม่เกิน 120 ตัวอักษร)</span><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(event)=>setField('description',event.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><DescriptionHelp value={form.description}/></label>
       </fieldset>
       <div className="admin-entry-footer"><span>{record?'กำลังแก้ไขข้อมูลของคุณครูคนนี้':'กำลังกรอกข้อมูลแทนคุณครูคนนี้'}</span><button className="primary-button"><Check size={16}/> {record?'บันทึกการแก้ไข':'บันทึกข้อมูล'}</button></div>
     </form>
@@ -960,67 +1002,85 @@ function TemplatePanel({communities,accounts,onDeleteDate,onDeleteCommunity}:{co
   </section>
 }
 
-function FittedTemplateValue({as='b',className,style,children}:{as?:'b'|'p';className:string;style?:React.CSSProperties;children:React.ReactNode}) {
-  const valueRef = useRef<HTMLElement>(null)
-  useLayoutEffect(()=>{
-    const element = valueRef.current
-    if (!element) return
-    const text = element.querySelector<HTMLElement>('.original-template-value-text') ?? element
-    const configuredFontSize = element.style.fontSize
-    element.style.removeProperty('font-size')
-    const configuredPixels = configuredFontSize.endsWith('px') ? Number.parseFloat(configuredFontSize) : Number.NaN
-    const baseSize = Number.isFinite(configuredPixels) ? configuredPixels : Number.parseFloat(window.getComputedStyle(element).fontSize)
-    const minimumSize = Math.max(10,baseSize * .55)
-    let size = baseSize
-    while (size > minimumSize && (text.scrollWidth > text.clientWidth + 1 || text.scrollHeight > text.clientHeight + 1)) {
-      size -= .5
-      element.style.fontSize = `${size}px`
-    }
-    element.style.fontSize = `${size}px`
-  },[children,style])
-  const fittedClassName = `original-template-value ${className}`
-  if (as === 'p') return <p ref={valueRef as unknown as React.Ref<HTMLParagraphElement>} className={fittedClassName} style={style}><span className="original-template-value-text">{children}</span></p>
-  return <b ref={valueRef as unknown as React.Ref<HTMLElement>} className={fittedClassName} style={style}><span className="original-template-value-text">{children}</span></b>
-}
-
 function fitTemplateText(value:string,maxLength:number) { return Array.from(value).slice(0,maxLength).join('') }
 
-function HtmlTeacherTemplateCard({community,teacher,ref}:{community:Community;teacher:TeacherAccount;ref?:React.Ref<HTMLDivElement>}) {
-  const description = fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)
-  return <article className="teacher-html-template" ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
-    <div className="teacher-html-template-accent accent-one"/><div className="teacher-html-template-accent accent-two"/>
-    <header className="teacher-html-template-header">
-      <div className="teacher-html-template-brand"><img src="/school-crest.png" alt="ตราโรงเรียน"/><div><span>พื้นที่เล็ก ๆ สำหรับไอเดียและการเรียนรู้</span><h1>กิจกรรมชุมนุม</h1><strong>โรงเรียนวิเชียรมาตุ</strong></div></div>
-      <div className="teacher-html-template-code"><small>รหัสชุมนุม</small><b>{community.community_code || '-'}</b></div>
-    </header>
-    <div className="teacher-html-template-body">
-      <div className="teacher-html-template-photo-column"><div className="teacher-html-template-photo">{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div><ImagePlus size={38}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div><div className="teacher-html-template-advisor"><span>ครูที่ปรึกษาชุมนุม</span><FittedTemplateValue className="teacher-html-template-advisor-value" style={{fontSize:'28px'}}>{community.advisor_name || teacher.teacher_name}</FittedTemplateValue></div></div>
-      <div className="teacher-html-template-info">
-        <div className="teacher-html-template-field field-pink"><span>ชื่อชุมนุม</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'32px'}}>{community.community_name || '-'}</FittedTemplateValue></div>
-        <div className="teacher-html-template-field field-blue"><span>ครูที่ปรึกษา</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'29px'}}>{community.advisor_name || teacher.teacher_name}</FittedTemplateValue></div>
-        <div className="teacher-html-template-field-row"><div className="teacher-html-template-field field-green"><span>สถานที่</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'27px'}}>{community.location || '-'}</FittedTemplateValue></div><div className="teacher-html-template-field field-purple"><span>จำนวนที่รับ</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'34px'}}>{community.member_count ? `${number(community.member_count)} คน` : '-'}</FittedTemplateValue></div></div>
-        <div className="teacher-html-template-description"><span>รายละเอียดกิจกรรม</span><FittedTemplateValue as="p" className="teacher-html-template-description-value" style={{fontSize:'22px'}}>{description}</FittedTemplateValue><small>ระบบจัดข้อความให้อยู่ในกรอบ · ไม่เกิน {TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร</small></div>
-      </div>
+function fitPosterText(field:HTMLElement,max:number,min:number) {
+  const text = field.firstElementChild as HTMLElement | null
+  if (!text) return
+  const fits = (size:number) => { field.style.fontSize = `${size}px`; return text.scrollWidth <= text.clientWidth + 1 && field.scrollHeight <= field.clientHeight + 1 }
+  if (fits(max)) return
+  let low = min, high = max
+  while (high - low > .5) { const middle = (low + high) / 2; if (fits(middle)) low = middle; else high = middle }
+  field.style.fontSize = `${low}px`
+}
+
+function PosterText({name,field,children}:{name:TemplateFieldKey;field:PosterField;children:React.ReactNode}) {
+  const fieldRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(()=>{
+    const element = fieldRef.current
+    if (!element) return
+    let active = true
+    fitPosterText(element,field.max,field.min)
+    // Web fonts load lazily and change text width, so measure again whenever one finishes loading.
+    const refit = () => { if (active) fitPosterText(element,field.max,field.min) }
+    const style = window.getComputedStyle(element)
+    void Promise.all([document.fonts?.load(`${style.fontWeight} ${field.max}px ${style.fontFamily}`),document.fonts?.ready]).catch(()=>undefined).then(refit)
+    document.fonts?.addEventListener('loadingdone',refit)
+    return ()=>{ active = false; document.fonts?.removeEventListener('loadingdone',refit) }
+  },[children,field])
+  return <div ref={fieldRef} className={`poster-field poster-field-${name} ${field.className ?? ''}`} style={{...field.box,fontSize:field.max}}><span>{children}</span></div>
+}
+
+function HtmlPosterBackdrop() {
+  return <>
+    <div className="html-poster-sky"/><div className="html-poster-blob blob-one"/><div className="html-poster-blob blob-two"/><div className="html-poster-blob blob-three"/>
+    <img className="html-poster-crest" src="/school-crest.png" alt="ตราโรงเรียน"/>
+    <div className="html-poster-title"><h1><span>กิจกรรม</span><span>ชุมนุม</span></h1><strong>โรงเรียนวิเชียรมาตุ</strong></div>
+    <div className="html-poster-photo-frame"/>
+    <div className="html-poster-caption">ครูที่ปรึกษาชุมนุม</div>
+    {Object.values(htmlPosterCards).map(({label,tone,card})=><div key={label} className={`html-poster-card tone-${tone}`} style={card}><span>{label}</span></div>)}
+    <div className="html-poster-footer">ค้นหาความชอบ เติบโตไปด้วยกัน</div>
+  </>
+}
+
+function PosterTeacherTemplateCard({community,teacher,variant,ref}:{community:Community;teacher:TeacherAccount;variant:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
+  const cardRef = useRef<HTMLDivElement|null>(null)
+  const [scale,setScale] = useState(1)
+  useLayoutEffect(()=>{
+    const element = cardRef.current
+    if (!element) return
+    const update = () => { if (element.clientWidth) setScale(element.clientWidth / POSTER_SIZE) }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    return ()=>observer.disconnect()
+  },[])
+  const setRefs = (node:HTMLDivElement|null) => { cardRef.current = node; if (typeof ref === 'function') ref(node); else if (ref) (ref as React.RefObject<HTMLDivElement|null>).current = node }
+  const template = templateVariants[variant]
+  const fields = template.fields
+  const advisor = community.advisor_name || teacher.teacher_name
+  return <article className={`teacher-template-card original-template-card poster-template-card template-variant-${variant}`} ref={setRefs} aria-label={`Template ชุมนุม ${community.community_name}`}>
+    <div className="poster-stage" style={{width:POSTER_SIZE,height:POSTER_SIZE,transform:`scale(${scale})`}}>
+      {template.background?<img className="poster-background" src={template.background} alt="" aria-hidden="true"/>:<HtmlPosterBackdrop/>}
+      <div className="poster-photo" style={template.photo}>{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${advisor}`}/>:<div className="poster-photo-empty"><ImagePlus size={64}/><span>รูปภาพคุณครู<br/>ประจำชุมนุม</span></div>}</div>
+      <PosterText name="code" field={fields.code}>{community.community_code || '-'}</PosterText>
+      <PosterText name="name" field={fields.name}>{community.community_name || '-'}</PosterText>
+      <PosterText name="advisor" field={fields.advisor}>{advisor}</PosterText>
+      <PosterText name="location" field={fields.location}>{community.location || '-'}</PosterText>
+      <PosterText name="members" field={fields.members}>{community.member_count ? `${number(community.member_count)} คน` : '-'}</PosterText>
+      <PosterText name="description" field={fields.description}>{fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)}</PosterText>
     </div>
-    <footer className="teacher-html-template-footer"><span>ค้นหาความชอบ เติบโตไปด้วยกัน</span><span>โรงเรียนวิเชียรมาตุ</span></footer>
   </article>
 }
 
 function TeacherTemplateCard({community,teacher,variant='html',ref}:{community:Community;teacher:TeacherAccount;variant?:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
-  if (variant === 'html') return <HtmlTeacherTemplateCard community={community} teacher={teacher} ref={ref}/>
-  const template = templateVariants[variant]
-  const fieldStyle = (key:TemplateFieldKey) => variant==='classic' ? undefined : template.fields[key]
-  const description = fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)
-  return <article className={`teacher-template-card original-template-card template-variant-${variant}`} ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
-    <img className="original-template-background" src={template.background} alt="" aria-hidden="true"/>
-    <div className="original-template-photo" style={variant==='classic'?undefined:template.photo}>{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div className="original-template-photo-empty"><ImagePlus size={36}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div>
-    <FittedTemplateValue className="original-template-code" style={fieldStyle('code')}>{community.community_code || '-'}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-name" style={fieldStyle('name')}>{community.community_name || '-'}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-advisor" style={fieldStyle('advisor')}>{community.advisor_name || teacher.teacher_name}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-location" style={fieldStyle('location')}>{community.location || '-'}</FittedTemplateValue>
-    <FittedTemplateValue className="original-template-members" style={fieldStyle('members')}>{community.member_count ? number(community.member_count) : '-'}</FittedTemplateValue>
-    <FittedTemplateValue as="p" className="original-template-description" style={fieldStyle('description')}>{description}</FittedTemplateValue>
-  </article>
+  return <PosterTeacherTemplateCard community={community} teacher={teacher} variant={variant} ref={ref}/>
+}
+
+function DescriptionHelp({value}:{value:string}) {
+  const length = Array.from(value).length
+  const tooLong = length > TEMPLATE_DETAIL_RECOMMENDED_LENGTH
+  return <small className={`field-help${tooLong?' field-help-warning':''}`}>{length}/{TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร · {tooLong?`ยาวเกิน ${TEMPLATE_DETAIL_RECOMMENDED_LENGTH} ตัวอักษร ตัวหนังสือใน Template จะเล็กลง`:`แนะนำไม่เกิน ${TEMPLATE_DETAIL_RECOMMENDED_LENGTH} ตัวอักษร (ประมาณ 2 ประโยคสั้น) เพื่อให้ Template สวยที่สุด`}</small>
 }
 
 function TemplatePagination({page,pageCount,onPageChange}:{page:number;pageCount:number;onPageChange:(page:number)=>void}) {
@@ -1073,7 +1133,7 @@ function ImagePickerField(){
   const picker=imagePickerController
   const [showImage,setShowImage]=useState(false)
   if(!picker)return null
-  return <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน</span><div className="image-picker"><input id="community-image-file" type="file" accept="image/*" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><input id="community-image-camera" type="file" accept="image/*" capture="environment" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{picker.preview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={picker.preview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={picker.clear}><X size={14}/> ลบรูป</button></div>}<small>{picker.preview?'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น':'ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div>{showImage&&picker.preview&&<ImageLightbox src={picker.preview} onClose={()=>setShowImage(false)}/>}</div>
+  return <div className="field image-field"><span>รูปภาพคุณครูประจำชุมชน<i>*</i></span><div className="image-picker"><input id="community-image-file" type="file" accept="image/*" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><input id="community-image-camera" type="file" accept="image/*" capture="environment" onChange={(e)=>picker.choose(e.target.files?.[0] ?? null)}/><div className="image-picker-actions"><label htmlFor="community-image-file"><ImagePlus size={16}/> เลือกรูป</label><label htmlFor="community-image-camera"><Camera size={16}/> ถ่ายรูป</label></div>{picker.preview&&<div className="image-preview"><button type="button" className="image-preview-trigger" onClick={()=>setShowImage(true)} aria-label="ดูรูปภาพขนาดเต็ม"><img src={picker.preview} alt="ตัวอย่างรูปคุณครูประจำชุมชน"/></button><button type="button" onClick={picker.clear}><X size={14}/> ลบรูป</button></div>}<small>{picker.preview?'คลิกรูปเพื่อดูขนาดเต็ม · ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น':'ระบบจะย่อรูปไม่เกิน 500 KB และเก็บเมื่อกดบันทึกข้อมูลเท่านั้น'}</small></div>{showImage&&picker.preview&&<ImageLightbox src={picker.preview} onClose={()=>setShowImage(false)}/>}</div>
 }
 function Field({label,required,className='',children}:{label:string;required?:boolean;className?:string;children:React.ReactNode}){return label==='ลิงก์รูปภาพ (ไม่บังคับ)'?<ImagePickerField/>:<label className={`field ${className}`}><span>{label}{required&&<i>*</i>}</span>{children}</label>}
 function Metric({value,label,icon}:{value:number|string;label:string;icon:React.ReactNode}){return <div className="metric"><span>{icon}</span><div><b>{typeof value==='number'?number(value):value}</b><small>{label}</small></div></div>}
