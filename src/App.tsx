@@ -17,10 +17,11 @@ type CommunityForm = typeof emptyForm
 type AdminCommunitySave = (owner:TeacherAccount,form:CommunityForm,imageFile:File|null,imagePreview:string)=>Promise<void>
 const TEMPLATE_DETAIL_MAX_LENGTH = 120
 const limitTemplateDetail = (value:string) => Array.from(value).slice(0,TEMPLATE_DETAIL_MAX_LENGTH).join('')
-type TemplateVariant = 'classic'|'colorful'|'modern'
+type TemplateVariant = 'html'|'classic'|'colorful'|'modern'
 type TemplateFieldKey = 'code'|'name'|'advisor'|'location'|'members'|'description'
 type TemplateVariantConfig = { label:string; background:string; photo:React.CSSProperties; fields:Partial<Record<TemplateFieldKey,React.CSSProperties>> }
 const templateVariants:Record<TemplateVariant,TemplateVariantConfig> = {
+  html:{label:'แบบ HTML · ข้อความพอดี',background:'',photo:{},fields:{}},
   classic:{label:'แบบเดิม · สดใส',background:'/club-template-original.png',photo:{},fields:{}},
   colorful:{label:'แบบสีพาสเทล · ดอกไม้',background:'/template-colorful.png',photo:{left:'5.2%',top:'27.1%',width:'39.1%',height:'51.7%'},fields:{
     code:{left:'46.1%',top:'27.2%',width:'47.5%',height:'7.2%',fontSize:'31px',whiteSpace:'nowrap'},
@@ -904,7 +905,7 @@ function TeacherCombobox({teachers,value,onChange,showAll=false}:{teachers:Teach
 
 function TemplatePanel({communities,accounts,onDeleteDate,onDeleteCommunity}:{communities:Community[];accounts:TeacherAccount[];onDeleteDate:(date:string)=>Promise<void>;onDeleteCommunity:(community:Community)=>Promise<void>}) {
   const [selectedDate,setSelectedDate] = useState(todayInBangkok())
-  const [templateVariant,setTemplateVariant] = useState<TemplateVariant>('classic')
+  const [templateVariant,setTemplateVariant] = useState<TemplateVariant>('html')
   const teachers = useMemo(()=>accounts.filter((account)=>account.role==='teacher'),[accounts])
   const [selectedTeacherId,setSelectedTeacherId] = useState('all')
   const [selectedIds,setSelectedIds] = useState<string[]>([])
@@ -984,7 +985,29 @@ function FittedTemplateValue({as='b',className,style,children}:{as?:'b'|'p';clas
 
 function fitTemplateText(value:string,maxLength:number) { return Array.from(value).slice(0,maxLength).join('') }
 
-function TeacherTemplateCard({community,teacher,variant='classic',ref}:{community:Community;teacher:TeacherAccount;variant?:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
+function HtmlTeacherTemplateCard({community,teacher,ref}:{community:Community;teacher:TeacherAccount;ref?:React.Ref<HTMLDivElement>}) {
+  const description = fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)
+  return <article className="teacher-html-template" ref={ref} aria-label={`Template ชุมนุม ${community.community_name}`}>
+    <div className="teacher-html-template-accent accent-one"/><div className="teacher-html-template-accent accent-two"/>
+    <header className="teacher-html-template-header">
+      <div className="teacher-html-template-brand"><img src="/school-crest.png" alt="ตราโรงเรียน"/><div><span>พื้นที่เล็ก ๆ สำหรับไอเดียและการเรียนรู้</span><h1>กิจกรรมชุมนุม</h1><strong>โรงเรียนวิเชียรมาตุ</strong></div></div>
+      <div className="teacher-html-template-code"><small>รหัสชุมนุม</small><b>{community.community_code || '-'}</b></div>
+    </header>
+    <div className="teacher-html-template-body">
+      <div className="teacher-html-template-photo-column"><div className="teacher-html-template-photo">{community.image_url?<img src={community.image_url} alt={`รูปคุณครู ${community.advisor_name || teacher.teacher_name}`}/>:<div><ImagePlus size={38}/><span>รูปภาพคุณครู<br/>ประจำชุมชน</span></div>}</div><div className="teacher-html-template-advisor"><span>ครูที่ปรึกษาชุมนุม</span><FittedTemplateValue className="teacher-html-template-advisor-value" style={{fontSize:'28px'}}>{community.advisor_name || teacher.teacher_name}</FittedTemplateValue></div></div>
+      <div className="teacher-html-template-info">
+        <div className="teacher-html-template-field field-pink"><span>ชื่อชุมนุม</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'32px'}}>{community.community_name || '-'}</FittedTemplateValue></div>
+        <div className="teacher-html-template-field field-blue"><span>ครูที่ปรึกษา</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'29px'}}>{community.advisor_name || teacher.teacher_name}</FittedTemplateValue></div>
+        <div className="teacher-html-template-field-row"><div className="teacher-html-template-field field-green"><span>สถานที่</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'27px'}}>{community.location || '-'}</FittedTemplateValue></div><div className="teacher-html-template-field field-purple"><span>จำนวนที่รับ</span><FittedTemplateValue className="teacher-html-template-value" style={{fontSize:'34px'}}>{community.member_count ? `${number(community.member_count)} คน` : '-'}</FittedTemplateValue></div></div>
+        <div className="teacher-html-template-description"><span>รายละเอียดกิจกรรม</span><FittedTemplateValue as="p" className="teacher-html-template-description-value" style={{fontSize:'22px'}}>{description}</FittedTemplateValue><small>ระบบจัดข้อความให้อยู่ในกรอบ · ไม่เกิน {TEMPLATE_DETAIL_MAX_LENGTH} ตัวอักษร</small></div>
+      </div>
+    </div>
+    <footer className="teacher-html-template-footer"><span>ค้นหาความชอบ เติบโตไปด้วยกัน</span><span>โรงเรียนวิเชียรมาตุ</span></footer>
+  </article>
+}
+
+function TeacherTemplateCard({community,teacher,variant='html',ref}:{community:Community;teacher:TeacherAccount;variant?:TemplateVariant;ref?:React.Ref<HTMLDivElement>}) {
+  if (variant === 'html') return <HtmlTeacherTemplateCard community={community} teacher={teacher} ref={ref}/>
   const template = templateVariants[variant]
   const fieldStyle = (key:TemplateFieldKey) => variant==='classic' ? undefined : template.fields[key]
   const description = fitTemplateText(community.description || '-',TEMPLATE_DETAIL_MAX_LENGTH)
