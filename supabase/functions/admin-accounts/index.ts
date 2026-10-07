@@ -9,7 +9,7 @@ const cors = {
 const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
 type TeacherInput = { teacher_name?: string; community_code?: string }
-const normalizeCode = (value: string) => value.normalize('NFKC').replace(/\s+/g, '').trim()
+const normalizeCode = (value: string) => value.normalize('NFKC').replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g, '').trim()
 
 async function assertValidAndAvailableCode(community_code: string, excludeId?: string) {
   const code = normalizeCode(community_code)
@@ -59,9 +59,8 @@ async function updateTeacher(id: string, teacher_name: string, community_code: s
   community_code = normalizeCode(community_code)
   if (!id || !teacher_name || !community_code) throw new Error('กรุณากรอกชื่อครูและรหัสชุมนุม')
   await assertValidAndAvailableCode(community_code, id)
-  const auth = await service.auth.admin.updateUserById(id, { password: crypto.randomUUID() })
-  if (auth.error) throw new Error(auth.error.message)
-
+  // Teachers sign in passwordlessly, so editing a profile never touches Auth.
+  // Some imported profiles have no matching Auth user, which made Auth calls fail.
   const { error } = await service.from('teacher_profiles')
     .update({ teacher_name, community_code })
     .eq('id', id)
@@ -104,7 +103,10 @@ Deno.serve(async (request) => {
     }
   } else if (action === 'delete') {
     const { error } = await service.auth.admin.deleteUser(id)
-    if (error) return Response.json({ error: error.message }, { status: 400, headers: cors })
+    if (error && error.status !== 404) return Response.json({ error: error.message }, { status: 400, headers: cors })
+    // Remove the profile directly too, in case it has no Auth user to cascade from.
+    const { error: profileError } = await service.from('teacher_profiles').delete().eq('id', id).eq('role', 'teacher')
+    if (profileError) return Response.json({ error: profileError.message }, { status: 400, headers: cors })
   } else if (action === 'bulk-create') {
     const rows = Array.isArray(body.accounts) ? body.accounts as TeacherInput[] : []
     let created = 0

@@ -1041,3 +1041,42 @@ body:has(.teacher-page) .credit-footer{flex:0 0 auto}
 @media(max-width:600px){
   .current-teacher-menu{display:none}
 }
+
+/* Teacher manager table */
+.teacher-table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 12px}
+.teacher-table-toolbar>span{color:#6b7d70;font-size:13px;white-space:nowrap}
+.teacher-table-search{display:flex;align-items:center;gap:8px;flex:1;max-width:360px;height:40px;padding:0 12px;border:1px solid #e3d9c9;border-radius:10px;background:#fff;color:#7b8b80}
+.teacher-table-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:#24382c}
+.teacher-table-wrap{overflow:auto;border:1px solid #eee3d5;border-radius:13px;background:#fff}
+.teacher-table{width:100%;border-collapse:collapse;font-size:14px}
+.teacher-table th,.teacher-table td{padding:11px 14px;text-align:left;border-bottom:1px solid #f1ebe1;vertical-align:middle}
+.teacher-table th{position:sticky;top:0;z-index:1;background:#edf4e1;color:#1e5f43;font-weight:700;font-size:13px;white-space:nowrap}
+.teacher-table tbody tr:nth-child(even){background:#fcfaf5}
+.teacher-table tbody tr:hover{background:#f3f8ec}
+.teacher-table tbody tr.is-editing{background:#fff6e2;box-shadow:inset 3px 0 0 #3b7652}
+.teacher-table tr:last-child td{border-bottom:0}
+.teacher-table .teacher-index-column{width:64px;text-align:center;color:#8a978e;font-variant-numeric:tabular-nums}
+.teacher-table .teacher-code-column{width:140px}
+.teacher-table .teacher-actions-column{width:170px;text-align:right}
+.teacher-name-cell{display:flex;align-items:center;gap:10px;min-width:0}
+.teacher-name-cell .account-avatar{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:13px}
+.teacher-name-cell b{font-weight:600;color:#24382c;line-height:1.4}
+.teacher-code-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#eef5e4;color:#2f6a48;font-weight:700;font-size:13px;white-space:nowrap}
+.teacher-row-actions{display:inline-flex;gap:6px}
+.teacher-row-actions button{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 11px;border:0;border-radius:8px;background:#e8f0da;color:#3b7652;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.teacher-row-actions button:hover{filter:brightness(.96)}
+.teacher-row-actions button.danger{background:#fff0ec;color:#c65c4d}
+.teacher-table-empty{padding:28px;text-align:center;color:#7b8b80;font-size:14px}
+.account-manager nav[aria-label="pagination"]{margin-top:14px}
+@media(max-width:600px){
+  .teacher-table-toolbar{flex-direction:column;align-items:stretch}
+  .teacher-table-search{max-width:none}
+  .teacher-table th,.teacher-table td{padding:10px 8px}
+  .teacher-table .teacher-index-column{width:40px}
+  .teacher-table .teacher-code-column{width:auto}
+  .teacher-table .teacher-actions-column{width:88px}
+  .teacher-row-actions button{width:36px;height:36px;padding:0;justify-content:center}
+  .teacher-row-actions button span{display:none}
+  .teacher-name-cell .account-avatar{display:none}
+}
+.notice.notice-error{background:#af493f;color:#fff}

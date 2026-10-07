@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
-import { ArrowRight, BookOpen, Camera, Check, ChevronDown, Database, Download, FileSpreadsheet, Image as ImageIcon, ImagePlus, KeyRound, LayoutDashboard, LoaderCircle, LockKeyhole, LogIn, LogOut, MapPin, Menu, Pencil, Plus, Search, Sparkles, Trash2, UserCog, Users, X } from 'lucide-react'
+import { ArrowRight, BookOpen, Camera, Check, ChevronDown, CircleAlert, Database, Download, FileSpreadsheet, Image as ImageIcon, ImagePlus, KeyRound, LayoutDashboard, LoaderCircle, LockKeyhole, LogIn, LogOut, MapPin, Menu, Pencil, Plus, Search, Sparkles, Trash2, UserCog, Users, X } from 'lucide-react'
 import { supabase, hasSupabaseConfig, supabaseConfigError } from './lib/supabase'
 import { seededTeachers } from './data/teachers'
 import './App.css'
@@ -95,7 +95,10 @@ const number = (n:number) => new Intl.NumberFormat('th-TH').format(n)
 const thaiDate = (value:string) => value ? new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',day:'numeric',month:'long',year:'numeric'}).format(new Date(`${value}T00:00:00+07:00`)) : '-'
 const formatBytes = (bytes:number) => bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 const normalizeSearch = (value:string) => value.normalize('NFKC').trim().toLowerCase().replace(/[\s-]+/g,'')
-const normalizeCommunityCode = (value:string) => value.normalize('NFKC').replace(/\s+/g,'').trim()
+// Strip spaces and invisible characters (often pasted from Excel/LINE) that make a valid-looking code fail validation.
+const normalizeCommunityCode = (value:string) => value.normalize('NFKC').replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g,'').trim()
+const isErrorNotice = (text:string) => /ไม่สำเร็จ|ไม่ถูกต้อง|ไม่พบ|ไม่มีสิทธิ์|ถูกใช้แล้ว|ซ้ำ|กรุณา|หมดเวลา/.test(text)
+const isValidCommunityCode = (value:string) => /^กก\d{3,}$/.test(value) || value === 'admin026'
 const normalizeImportHeader = (value:string) => normalizeSearch(value).replace(/[.:：_()/\\]/g,'')
 function extractTeacherRows(workbook:XLSX.WorkBook):ImportedTeacherRow[] {
   const teacherHeaders = ['ครูที่ปรึกษา','ครูผู้ดูแล','teacher','teachername','advisor','advisorname']
@@ -121,6 +124,18 @@ function extractTeacherRows(workbook:XLSX.WorkBook):ImportedTeacherRow[] {
   throw new Error('ไม่พบคอลัมน์ “ครูที่ปรึกษา” และ “รหัสชุมนุม” ในไฟล์')
 }
 const errorText = (error:unknown,fallback:string) => error instanceof Error ? error.message : fallback
+// supabase-js only reports "non-2xx status code"; the Edge Function's own message is in the response body.
+async function functionErrorText(error:{message:string;context?:unknown}) {
+  const response = error.context
+  if (!(response instanceof Response)) return error.message
+  try {
+    const body = await response.clone().json() as {error?:string;message?:string}
+    const detail = body.error ?? body.message
+    return detail ? `${detail} (HTTP ${response.status})` : `${error.message} (HTTP ${response.status})`
+  } catch {
+    return `${error.message} (HTTP ${response.status})`
+  }
+}
 function withRequestTimeout<T>(operation:PromiseLike<T>,label:string,timeoutMs=15000):Promise<T> {
   return new Promise<T>((resolve,reject)=>{
     const timer = window.setTimeout(()=>reject(new Error(`${label}ใช้เวลานานเกินไป กรุณาลองใหม่`)),timeoutMs)
@@ -488,7 +503,7 @@ function App() {
   }
   async function signInWithSupabase(username:string,adminOnly=false):Promise<boolean> {
     const result = await withRequestTimeout(supabase!.functions.invoke('passwordless-login',{body:{username,adminOnly}}),'เข้าสู่ระบบ')
-    if (result.error) { flash(`เข้าสู่ระบบไม่สำเร็จ: ${result.error.message}`); return false }
+    if (result.error) { flash(`เข้าสู่ระบบไม่สำเร็จ: ${await functionErrorText(result.error)}`); return false }
     const tokenHash = String((result.data as {token_hash?:string} | null)?.token_hash ?? '').trim()
     if (!tokenHash) { flash('เข้าสู่ระบบไม่สำเร็จ: ไม่ได้รับ token สำหรับสร้าง session'); return false }
     const {data,error} = await withRequestTimeout(supabase!.auth.verifyOtp({token_hash:tokenHash,type:'magiclink'}),'สร้าง session ผู้ใช้')
@@ -651,6 +666,7 @@ function App() {
     event.preventDefault(); if (!accountForm.teacher_name || !accountForm.community_code) { flash('กรุณากรอกชื่อครูและรหัสชุมนุม'); return }
     const teacherName = accountForm.teacher_name.trim()
     const communityCode = normalizeCommunityCode(accountForm.community_code)
+    if (!isValidCommunityCode(communityCode)) { flash(`รหัสชุมนุม “${communityCode}” ไม่ถูกต้อง กรุณาใช้ กก ตามด้วยตัวเลขอย่างน้อย 3 หลัก เช่น กก126`); return }
     const nameDuplicate = accounts.some((x)=>x.id!==editingAccount && normalizeSearch(x.teacher_name)===normalizeSearch(teacherName))
     const codeDuplicate = accounts.some((x)=>x.id!==editingAccount && normalizeSearch(x.community_code)===normalizeSearch(communityCode))
     if (nameDuplicate) { flash('ชื่อครูนี้ถูกใช้แล้ว กรุณาตรวจสอบชื่อหรือแก้ไขรายชื่อเดิม'); return }
@@ -663,7 +679,7 @@ function App() {
     try { result = await withRequestTimeout(supabase!.functions.invoke('admin-accounts',{body:{action:editingAccount?'update':'create',id:editingAccount,teacher_name:teacherName,community_code:communityCode}}),'บันทึกบัญชีครู') }
     catch (error) { flash(`บันทึกไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
     const {error} = result
-    if (error) { flash(`บันทึกไม่สำเร็จ: ${error.message}`); return }; setAccountForm(emptyAccount); setEditingAccount(null); await load(false); flash('บันทึกสำเร็จแล้ว · บันทึกบัญชีครูแล้ว')
+    if (error) { flash(`บันทึกไม่สำเร็จ: ${await functionErrorText(error)}`); return }; setAccountForm(emptyAccount); setEditingAccount(null); await load(false); flash('บันทึกสำเร็จแล้ว · บันทึกบัญชีครูแล้ว')
   }
   async function importAccounts(file:File|null) {
     if (!file) return
@@ -696,7 +712,7 @@ function App() {
         setAccounts(next); localStorage.setItem('teacher-community-accounts',JSON.stringify(next)); flash(`นำเข้าสำเร็จ ${number(imported.length)} รายชื่อครูแล้ว`); return
       }
       const result = await withRequestTimeout(supabase!.functions.invoke('admin-accounts',{body:{action:'bulk-create',accounts:imported}}),'นำเข้ารายชื่อครู',60000)
-      if (result.error) { flash(`นำเข้าไม่สำเร็จ: ${result.error.message}`); return }
+      if (result.error) { flash(`นำเข้าไม่สำเร็จ: ${await functionErrorText(result.error)}`); return }
       const summary = result.data as {created?:number;updated?:number;failed?:number}
       await load(false)
       flash(`นำเข้าสำเร็จ ${number((summary.created ?? 0)+(summary.updated ?? 0))} รายชื่อ${summary.failed ? ` · ข้าม ${number(summary.failed)} รายการ` : ''}`)
@@ -712,7 +728,7 @@ function App() {
     let result
     try { result = await withRequestTimeout(supabase!.functions.invoke('admin-accounts',{body:{action:'delete',id:account.id}}),'ลบบัญชีครู') }
     catch (error) { flash(`ลบไม่สำเร็จ: ${errorText(error,'เชื่อมต่อ Supabase ไม่สำเร็จ')}`); return }
-    const {error}=result; if(error){flash(`ลบไม่สำเร็จ: ${error.message}`);return}; await load(false);flash('ลบบัญชีครูแล้ว')
+    const {error}=result; if(error){flash(`ลบไม่สำเร็จ: ${await functionErrorText(error)}`);return}; await load(false);flash('ลบบัญชีครูแล้ว')
   }
   function editAccount(account:TeacherAccount) { setEditingAccount(account.id); setAccountForm({teacher_name:account.teacher_name,community_code:account.community_code}) }
   function exportExcel() { const sheet=XLSX.utils.json_to_sheet(communities.map((x)=>({'วันที่':thaiDate(x.activity_date),'รหัสชุมนุม':x.community_code,'ชื่อชุมนุม':x.community_name,'ครูที่ปรึกษา':x.advisor_name,'โรงเรียน':x.school_name,'สถานที่':x.location,'จำนวนสมาชิก':x.member_count,'รายละเอียด':x.description}))); sheet['!cols']=[18,12,30,24,26,20,14,60].map((wch)=>({wch})); const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,'ชุมนุมคุณครู'); XLSX.writeFile(book,'teacher-community.xlsx') }
@@ -724,7 +740,7 @@ function App() {
   const AdminPage = AdminMenu
   return <main className="app-shell">
     <header className="topbar safety-topbar"><button className="brand" onClick={()=>setView('teacher')}><span className="school-crest"><img src="/school-crest.png" alt="ตราโรงเรียน"/></span><span>{settings.title}<small>{settings.term} · {settings.year}</small></span></button><nav className="top-actions">{current&&current.role!=='admin'&&<span className="current-teacher-menu">{current.teacher_name}</span>}{!isAdmin&&<button className={view==='teacher'?'nav-button active':'nav-button'} onClick={()=>setView('teacher')}><Pencil size={16}/> ข้อมูลชุมนุม</button>}{isAdmin&&<AdminNavigation tab={adminTab} onChange={(next)=>{setAdminTab(next);window.sessionStorage.setItem(adminTabStorageKey,next)}}/>}{current?<button className="login-button logout-icon-button" aria-label="ออกจากระบบ" onClick={signOut}><LogOut size={16}/></button>:<button className="login-button" onClick={()=>setShowLogin(true)}><LogIn size={16}/> ค้นหาชื่อครู</button>}</nav></header>
-    {notice&&<div className="notice"><Check size={17}/>{notice}<button onClick={()=>setNotice('')}><X size={16}/></button></div>}
+    {notice&&<div className={isErrorNotice(notice)?'notice notice-error':'notice'}>{isErrorNotice(notice)?<CircleAlert size={17}/>:<Check size={17}/>}{notice}<button onClick={()=>setNotice('')}><X size={16}/></button></div>}
     {view==='teacher'?<section className="teacher-page safety-hero"><div className="teacher-intro"><div className="eyebrow"><Sparkles size={15}/> {settings.school}</div><h1>{current?<>สวัสดี<br/><em>{current.teacher_name}</em></>:<>{settings.title}<br/><em>{settings.term}</em></>}</h1><p>{current?`รหัสชุมนุมของคุณคือ ${current.community_code} คุณสามารถบันทึกหรือแก้ไขข้อมูลชุมนุมของตนเองได้`:'พิมพ์ชื่อของคุณเพื่อค้นหารายชื่อ แล้วกดเลือกเพื่อเข้าใช้งานได้ทันที'}</p>{current&&<div className="submission-status" role="status"><Check size={17}/><div><b>วันนี้ส่งข้อมูลแล้ว {number(todaySubmissionCount)} ครั้ง</b><span>กดบันทึกซ้ำได้ ระบบจะเก็บทุกครั้งและอัปเดตข้อมูลของวันนี้</span></div></div>}{current&&communities.find((x)=>x.owner_id===current.id&&x.activity_date===today)&&<button className="secondary-action" onClick={()=>openEditor(communities.find((x)=>x.owner_id===current.id&&x.activity_date===today))}><Pencil size={15}/> แก้ไขข้อมูลของวันนี้</button>}</div><form className="community-form" onSubmit={saveCommunity}><div className="form-heading"><div className="form-icon"><BookOpen size={21}/></div><div><h2>{editingId?'แก้ไขข้อมูลชุมนุม':'ข้อมูลชุมนุมของคุณ'}</h2><p>{current?`ข้อมูลประจำวันที่ ${thaiDate(today)} · แก้ไขได้ตลอดวันนี้`:'ค้นหาชื่อครูของคุณก่อนจึงจะบันทึกข้อมูลได้'}</p></div></div><fieldset disabled={!current} className="form-grid"><Field label="วันที่"><input className="readonly-field" type="date" value={form.activity_date} readOnly/></Field><Field label="รหัสชุมนุม"><input className="readonly-field" value={form.community_code} readOnly/></Field><Field label="ชื่อชุมนุม" required><input value={form.community_name} onChange={(e)=>setField('community_name',e.target.value)} placeholder="เช่น ร้านค้าสวัสดิการโรงเรียน"/></Field><Field label="ครูที่ปรึกษา" required><input value={form.advisor_name} onChange={(e)=>setField('advisor_name',e.target.value)} placeholder="ชื่อ-นามสกุล"/></Field><Field label="โรงเรียน" required><input value={form.school_name} onChange={(e)=>setField('school_name',e.target.value)} placeholder={settings.school}/></Field><Field label="สถานที่" required><input value={form.location} onChange={(e)=>setField('location',e.target.value)} placeholder="เช่น ห้องคอมพิวเตอร์ 2" required/></Field><Field label="จำนวนที่รับ (อย่างน้อย 22 คน)" required><input type="number" min="22" value={form.member_count} onChange={(e)=>setField('member_count',e.target.value)} placeholder="22" required/></Field><Field label="ลิงก์รูปภาพ (ไม่บังคับ)"><input value={form.image_url} onChange={(e)=>setField('image_url',e.target.value)} placeholder="https://..."/></Field><Field label="รายละเอียดกิจกรรม (ไม่บังคับ · ไม่เกิน 120 ตัวอักษร)" className="span-2"><textarea rows={4} maxLength={TEMPLATE_DETAIL_MAX_LENGTH} value={form.description} onChange={(e)=>setField('description',e.target.value)} placeholder="อธิบายเป้าหมาย กิจกรรม หรือสิ่งที่นักเรียนได้เรียนรู้"/><DescriptionHelp value={form.description}/></Field></fieldset><div className="form-footer"><span><LockKeyhole size={15}/>{current?'ข้อมูลประจำวันที่เลือกไว้แก้ไขได้เฉพาะรายชื่อของคุณ':'ข้อมูลจะถูกปลดล็อกเมื่อเลือกรายชื่อแล้ว'}</span><div>{current?<><button type="button" className="text-button" onClick={()=>{setForm({...emptyForm,activity_date:today,community_code:current?.community_code ?? '',advisor_name:current?.teacher_name ?? '',school_name:settings.school});setEditingId(null)}}>ล้างข้อมูล</button><button className="primary-button" disabled={saving}>{saving?<><LoaderCircle size={17} className="spin"/>กำลังบันทึกข้อมูล...</>:<><ArrowRight size={17}/>{editingId?'บันทึกการแก้ไข':'บันทึกข้อมูลวันนี้'}</>}</button></>:<button type="button" className="primary-button" onClick={()=>setShowLogin(true)}><Search size={17}/> ค้นหาชื่อครู</button>}</div></div></form></section>:<AdminPage accounts={accounts} communities={communities} filtered={filtered} selected={selected} search={search} setSearch={setSearch} loading={loading} accountForm={accountForm} setAccountForm={setAccountForm} editingAccount={editingAccount} onSaveAccount={saveAccount} onEditAccount={editAccount} onDeleteAccount={deleteAccount} onCancelAccount={()=>{setEditingAccount(null);setAccountForm(emptyAccount)}} onImportAccounts={importAccounts} importingAccounts={importingAccounts} onExportExcel={exportExcel} onExportCard={exportCard} onSelected={setSelectedId} cardRef={cardRef} settings={settings} onSaveSettings={updateSettings} onSaveAdminAuth={updateAdminAuth} storageItems={storageItems} storageStats={storageStats} onDeleteImage={deleteCommunityImage} onAdminSaveCommunity={saveCommunityForAdmin} onDeleteDate={deleteCommunitiesByDate} onDeleteBeforeDate={deleteCommunitiesBeforeDate} onDeleteCommunity={deleteCommunity} onLoadDatabaseUsage={loadDatabaseUsage} onRunApiAudit={runApiAudit} adminTab={adminTab}/>}<CreditFooter />
     {showLogin&&<div className="modal-backdrop initial-login-backdrop" onMouseDown={()=>current&&setShowLogin(false)}><section className="login-modal teacher-picker initial-login" onMouseDown={(e)=>e.stopPropagation()}><div className="login-symbol"><Search size={25}/></div><span className="login-kicker">ยินดีต้อนรับ</span><h2>เข้าสู่ระบบ</h2><p>ค้นหาชื่อของคุณ แล้วเลือกชื่อเพื่อเข้าไปกรอกข้อมูลชุมนุม</p><label>ชื่อครู<input autoFocus value={teacherSearch} onChange={(e)=>setTeacherSearch(e.target.value)} placeholder="พิมพ์ชื่อครูเพื่อค้นหา..."/></label><div className="teacher-results">{teacherSearch.trim()?teacherMatches.map((teacher)=><button key={teacher.id} onClick={()=>selectTeacher(teacher)}><span>{teacher.teacher_name.slice(0,1)}</span><div><b>{teacher.teacher_name}</b><small><KeyRound size={12}/> รหัสชุมนุม {teacher.community_code}</small></div><ArrowRight size={17}/></button>):<div className="search-empty">เริ่มพิมพ์ชื่อ เพื่อค้นหาจาก {number(accounts.filter((item)=>item.role==='teacher').length)} รายชื่อครู</div>}{teacherSearch.trim()&&teacherMatches.length===0&&<div className="search-empty">ไม่พบรายชื่อ ลองพิมพ์คำอื่น หรือแจ้งผู้ดูแลระบบ</div>}</div><button className="admin-entry-button" onClick={()=>{setShowLogin(false);setShowAdminLogin(true)}}><LockKeyhole size={15}/> เข้าสู่ระบบผู้ดูแล</button></section></div>}
     {showAdminLogin&&<div className="modal-backdrop" onMouseDown={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><section className="login-modal admin-login" onMouseDown={(e)=>e.stopPropagation()}><button className="modal-close" onClick={()=>{setShowAdminLogin(false);if(!current)setShowLogin(true)}}><X size={19}/></button><div className="login-symbol"><LockKeyhole size={25}/></div><h2>เข้าสู่ระบบผู้ดูแล</h2><p>พิมพ์ Username `admin` เพื่อเข้าใช้งานโดยไม่ต้องใช้ Password</p><form onSubmit={adminSignIn}><label>Username<input autoFocus value={adminUsername} onChange={(e)=>setAdminUsername(e.target.value)} placeholder="admin" autoComplete="username" required/></label><button className="primary-button full"><LockKeyhole size={17}/> เข้าสู่ระบบผู้ดูแล</button></form></section></div>}
@@ -743,7 +759,7 @@ type LoginScreenProps = {
   onDismissNotice:()=>void
 }
 function LoginScreen(p:LoginScreenProps){return <main className="login-screen initial-login-backdrop">
-  {p.notice&&<div className="login-screen-notice"><Check size={17}/>{p.notice}<button onClick={p.onDismissNotice}><X size={16}/></button></div>}
+  {p.notice&&<div className="login-screen-notice">{isErrorNotice(p.notice)?<CircleAlert size={17}/>:<Check size={17}/>}{p.notice}<button onClick={p.onDismissNotice}><X size={16}/></button></div>}
   <section className="login-layout">
     <section className="login-visual"><div className="login-visual-copy"><span className="login-visual-kicker">พื้นที่เล็ก ๆ สำหรับไอเดียและการเรียนรู้</span><h1>โรงเรียนวิเชียรมาตุ</h1><p>จัดการข้อมูลชุมนุมได้ง่าย ๆ ในไม่กี่ขั้นตอน</p></div><img src="/mascot-welcome.png" alt="น้องชุมนม มาสคอตระบบลงทะเบียนชุมนุม"/></section>
     <section className="login-card initial-login"><div className="login-card-sprout school-logo"><img src="/school-crest.png" alt="ตราโรงเรียน"/></div><h2>ยินดีต้อนรับคุณครู</h2><p>เข้าสู่ระบบเพื่อจัดการข้อมูลชุมนุม</p><div className="login-term">{p.settings.term} · {p.settings.year}</div>
@@ -1121,6 +1137,18 @@ function TemplatePagination({page,pageCount,onPageChange}:{page:number;pageCount
 
 function TeacherManagerPanel(p:AdminProps) {
   const teachers = p.accounts.filter((item)=>item.role==='teacher')
+  const [query,setQuery] = useState('')
+  const [page,setPage] = useState(1)
+  const pageSize = 20
+  const visibleTeachers = useMemo(()=>{
+    const keyword = query.trim().toLowerCase()
+    return teachers
+      .filter((item)=>!keyword || item.teacher_name.toLowerCase().includes(keyword) || item.community_code.toLowerCase().includes(keyword))
+      .sort((a,b)=>a.community_code.localeCompare(b.community_code,'th',{numeric:true}))
+  },[teachers,query])
+  const pageCount = Math.max(1,Math.ceil(visibleTeachers.length/pageSize))
+  const currentPage = Math.min(page,pageCount)
+  const pagedTeachers = visibleTeachers.slice((currentPage-1)*pageSize,currentPage*pageSize)
   return <section className="account-manager admin-panel">
     <div className="section-title"><UserCog size={18}/><div><h3>จัดการรายชื่อครู</h3><p>เพิ่ม แก้ไข หรือลบรายชื่อครูและรหัสชุมนุม</p></div></div>
     <form className="account-form" onSubmit={p.onSaveAccount}>
@@ -1133,7 +1161,20 @@ function TeacherManagerPanel(p:AdminProps) {
       </div>
     </form>
     <p className="import-accounts-help">นำเข้าไฟล์ Excel ที่มีคอลัมน์ “ครูที่ปรึกษา” และ “รหัสชุมนุม” ระบบจะสร้างหรืออัปเดตรายชื่อให้เป็นชุดเดียว</p>
-    <div className="account-list">{teachers.map((account)=><div className="account-row" key={account.id}><span className="account-avatar">{account.teacher_name.slice(0,1)}</span><div><b>{account.teacher_name}</b><small><KeyRound size={11}/>{account.community_code}</small></div><button onClick={()=>p.onEditAccount(account)} title="แก้ไข"><Pencil size={15}/></button><button className="danger" onClick={()=>p.onDeleteAccount(account)} title="ลบ"><Trash2 size={15}/></button></div>)}</div>
+    <div className="teacher-table-toolbar">
+      <label className="teacher-table-search"><Search size={16}/><input value={query} onChange={(event)=>{setQuery(event.target.value);setPage(1)}} placeholder="ค้นหาชื่อครูหรือรหัสชุมนุม..."/></label>
+      <span>{query.trim()?`พบ ${number(visibleTeachers.length)} จาก ${number(teachers.length)} รายชื่อ`:`ทั้งหมด ${number(teachers.length)} รายชื่อ`}</span>
+    </div>
+    <div className="teacher-table-wrap"><table className="teacher-table">
+      <thead><tr><th className="teacher-index-column">ลำดับ</th><th>ชื่อครู</th><th className="teacher-code-column">รหัสชุมนุม</th><th className="teacher-actions-column">จัดการ</th></tr></thead>
+      <tbody>{pagedTeachers.map((account,index)=><tr key={account.id} className={account.id===p.editingAccount?'is-editing':undefined}>
+        <td className="teacher-index-column">{number((currentPage-1)*pageSize+index+1)}</td>
+        <td><div className="teacher-name-cell"><span className="account-avatar">{account.teacher_name.slice(0,1)}</span><b>{account.teacher_name}</b></div></td>
+        <td className="teacher-code-column"><span className="teacher-code-pill"><KeyRound size={12}/>{account.community_code}</span></td>
+        <td className="teacher-actions-column"><div className="teacher-row-actions"><button type="button" onClick={()=>p.onEditAccount(account)} title="แก้ไข"><Pencil size={14}/><span>แก้ไข</span></button><button type="button" className="danger" onClick={()=>p.onDeleteAccount(account)} title="ลบ"><Trash2 size={14}/><span>ลบ</span></button></div></td>
+      </tr>)}</tbody>
+    </table>{!pagedTeachers.length&&<div className="teacher-table-empty">{teachers.length?'ไม่พบรายชื่อที่ค้นหา':'ยังไม่มีรายชื่อครู'}</div>}</div>
+    {pageCount>1&&<TemplatePagination page={currentPage} pageCount={pageCount} onPageChange={setPage}/>}
   </section>
 }
 
