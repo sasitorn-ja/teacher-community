@@ -21,11 +21,25 @@ function tokenSubject(token: string) {
 }
 
 async function callerRole(token: string) {
-  const { data: { user } } = await service.auth.getUser(token)
-  const userId = user?.id ?? tokenSubject(token)
+  let userId = tokenSubject(token)
+  try {
+    const { data: { user } } = await service.auth.getUser(token)
+    userId = user?.id ?? userId
+  } catch {
+    // New sb_secret keys can fail in the SDK's auth helper; the JWT subject
+    // remains sufficient to resolve the profile through the REST API below.
+  }
   if (!userId) return null
-  const { data: caller } = await service.from('teacher_profiles').select('role').eq('id', userId).maybeSingle()
-  return caller?.role ?? null
+  try {
+    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/teacher_profiles?id=eq.${encodeURIComponent(userId)}&select=role`, {
+      headers: { apikey: serviceKey!, Authorization: `Bearer ${serviceKey}` },
+    })
+    if (!response.ok) return null
+    const rows = await response.json() as Array<{ role?: string }>
+    return rows[0]?.role ?? null
+  } catch {
+    return null
+  }
 }
 
 type TeacherInput = { teacher_name?: string; community_code?: string }
