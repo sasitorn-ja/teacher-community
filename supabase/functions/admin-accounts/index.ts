@@ -6,7 +6,8 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Max-Age': '86400',
 }
-const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+const serviceKey = Deno.env.get('PASSWORDLESS_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const service = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey!)
 
 type TeacherInput = { teacher_name?: string; community_code?: string }
 const normalizeCode = (value: string) => value.normalize('NFKC').replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g, '').trim()
