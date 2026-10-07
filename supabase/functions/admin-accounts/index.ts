@@ -9,6 +9,25 @@ const cors = {
 const serviceKey = Deno.env.get('PASSWORDLESS_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const service = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey!)
 
+function tokenSubject(token: string) {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    return (JSON.parse(json) as { sub?: string }).sub ?? null
+  } catch {
+    return null
+  }
+}
+
+async function callerRole(token: string) {
+  const { data: { user } } = await service.auth.getUser(token)
+  const userId = user?.id ?? tokenSubject(token)
+  if (!userId) return null
+  const { data: caller } = await service.from('teacher_profiles').select('role').eq('id', userId).maybeSingle()
+  return caller?.role ?? null
+}
+
 type TeacherInput = { teacher_name?: string; community_code?: string }
 const normalizeCode = (value: string) => value.normalize('NFKC').replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g, '').trim()
 
@@ -72,12 +91,7 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   const token = (request.headers.get('Authorization') ?? '').replace('Bearer ', '')
-  const { data: { user } } = await service.auth.getUser(token)
-  const { data: caller } = user
-    ? await service.from('teacher_profiles').select('role').eq('id', user.id).single()
-    : { data: null }
-
-  if (caller?.role !== 'admin') {
+  if (await callerRole(token) !== 'admin') {
     return Response.json({ error: 'Admin only' }, { status: 403, headers: cors })
   }
 
